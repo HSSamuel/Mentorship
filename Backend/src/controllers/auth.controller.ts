@@ -18,12 +18,28 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   const { email, password, role } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create both the user and their profile in a single transaction
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword, role },
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+        profile: {
+          create: {
+            name: email.split("@")[0], // Use the part of the email before the @ as a default name
+          },
+        },
+      },
+      include: {
+        profile: true, // Include the new profile in the response
+      },
     });
+
     const { password: _, ...userWithoutPassword } = user;
     res.status(201).json(userWithoutPassword);
   } catch (error) {
+    console.error("Registration Error:", error); // Log the actual error to the console
     res.status(500).json({ message: "Server error during registration" });
   }
 };
@@ -32,10 +48,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+
+    // Corrected logic: check for user and user.password existence
+    if (
+      !user ||
+      !user.password ||
+      !(await bcrypt.compare(password, user.password))
+    ) {
       res.status(401).json({ message: "Invalid credentials" });
       return;
     }
+
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
       expiresIn: "1d",
     });

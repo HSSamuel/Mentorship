@@ -1,8 +1,46 @@
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
 const getUserIdFromRequest = (req: Request): string | null => {
   if (!req.user) return null;
   if ("userId" in req.user) return req.user.userId as string;
   if ("id" in req.user) return req.user.id as string;
   return null;
+};
+
+// New function to get a single mentor's public profile
+export const getMentorPublicProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const mentor = await prisma.user.findUnique({
+      where: { id, role: "MENTOR" },
+      select: {
+        id: true,
+        profile: {
+          select: {
+            name: true,
+            bio: true,
+            skills: true,
+            goals: true,
+          },
+        },
+      },
+    });
+
+    if (!mentor) {
+      res.status(404).json({ message: "Mentor not found." });
+      return;
+    }
+
+    res.status(200).json(mentor);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching mentor profile." });
+  }
 };
 
 export const getAllMentors = async (

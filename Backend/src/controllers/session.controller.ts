@@ -1,3 +1,9 @@
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import { createCalendarEvent } from "../services/calendar.service";
+
+const prisma = new PrismaClient();
+
 const getUserIdForSession = (req: Request): string | null => {
   if (!req.user) return null;
   if ("userId" in req.user) return req.user.userId as string;
@@ -7,7 +13,7 @@ const getUserIdForSession = (req: Request): string | null => {
 
 const getUserRole = (req: Request): string | null => {
   if (!req.user) return null;
-  return req.user.role as string;
+  return (req.user as any).role as string;
 };
 
 export const setAvailability = async (
@@ -56,6 +62,45 @@ export const createSession = async (
     const newSession = await prisma.session.create({
       data: { menteeId, mentorId, date: new Date(sessionTime) },
     });
+
+    const mentee = await prisma.user.findUnique({
+      where: { id: menteeId },
+      include: { profile: true },
+    });
+
+    // --- Create Notification for Mentor ---
+    await prisma.notification.create({
+      data: {
+        userId: mentorId,
+        type: "SESSION_BOOKED",
+        message: `${
+          mentee?.profile?.name || "A mentee"
+        } has booked a session with you.`,
+        link: "/my-sessions",
+      },
+    });
+
+    // Google Calendar Event Creation
+    try {
+      const mentor = await prisma.user.findUnique({ where: { id: mentorId } });
+      if (mentor && mentee) {
+        const eventDetails = {
+          summary: `Mentorship Session: ${mentor.email} & ${mentee.email}`,
+          description:
+            "Your mentorship session booked via the MentorMe Platform.",
+          start: new Date(sessionTime),
+          end: new Date(new Date(sessionTime).getTime() + 60 * 60 * 1000), // Assume 1-hour session
+          attendees: [mentor.email, mentee.email],
+        };
+        if (mentor.googleRefreshToken)
+          await createCalendarEvent(mentor.id, eventDetails);
+        if (mentee.googleRefreshToken)
+          await createCalendarEvent(mentee.id, eventDetails);
+      }
+    } catch (calendarError) {
+      console.error("Could not create calendar event:", calendarError);
+    }
+
     res.status(201).json(newSession);
   } catch (error) {
     res.status(500).json({ message: "Error booking session." });

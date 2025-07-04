@@ -32,7 +32,7 @@ export const adminMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
-  if (req.user?.role !== "ADMIN") {
+  if (!req.user || !("role" in req.user) || req.user.role !== "ADMIN") {
     res
       .status(403)
       .json({ message: "Access denied. Admin privileges required." });
@@ -46,7 +46,7 @@ export const mentorMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
-  if (req.user?.role !== "MENTOR") {
+  if (!req.user || !("role" in req.user) || req.user.role !== "MENTOR") {
     res
       .status(403)
       .json({ message: "Access denied. Mentor privileges required." });
@@ -60,7 +60,7 @@ export const menteeMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
-  if (req.user?.role !== "MENTEE") {
+  if (!req.user || !("role" in req.user) || req.user.role !== "MENTEE") {
     res
       .status(403)
       .json({ message: "Access denied. Mentee privileges required." });

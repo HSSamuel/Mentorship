@@ -5,6 +5,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import session from "express-session";
 import passport from "passport";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 // Import all route handlers
 import authRoutes from "./routes/auth.routes";
@@ -13,8 +15,9 @@ import requestRoutes from "./routes/request.routes";
 // import sessionRoutes from "./routes/session.routes"; // Make sure this file exists and is correctly named
 import adminRoutes from "./routes/admin.routes";
 
-// Import passport config
+// Import passport config and socket service
 import "./config/passport";
+import { initializeSocket } from "./services/socket.service";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -45,6 +48,18 @@ app.use("/api/requests", requestRoutes);
 // app.use("/api/sessions", sessionRoutes);
 app.use("/api/admin", adminRoutes);
 
+// Create HTTP server and Socket.IO instance
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
+
+// Initialize Socket.IO logic
+initializeSocket(io);
+
 // Connect to MongoDB and Then Start Server
 const startServer = async () => {
   if (!MONGO_URI) {
@@ -56,7 +71,8 @@ const startServer = async () => {
     await mongoose.connect(MONGO_URI);
     console.log("🟢 MongoDB connected successfully");
 
-    app.listen(PORT, () => {
+    // Use the httpServer to listen, which includes both Express and Socket.IO
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
     });
   } catch (error) {

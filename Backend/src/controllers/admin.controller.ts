@@ -68,9 +68,8 @@ export const assignMentor = async (req: Request, res: Response) => {
   const { menteeId, mentorId } = req.body;
 
   if (!menteeId || !mentorId) {
-    return res
-      .status(400)
-      .json({ message: "Mentee ID and Mentor ID are required" });
+    res.status(400).json({ message: "Mentee ID and Mentor ID are required" });
+    return;
   }
 
   try {

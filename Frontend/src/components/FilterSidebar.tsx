@@ -2,73 +2,64 @@ import React from "react";
 
 interface FilterSidebarProps {
   skills: string[];
+  selectedSkill: string;
   onSkillChange: (skill: string) => void;
-  onIndustryChange: (industry: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 const FilterSidebar = ({
   skills,
+  selectedSkill,
   onSkillChange,
-  onIndustryChange,
+  searchQuery,
+  onSearchChange,
 }: FilterSidebarProps) => {
-  const styles = {
-    sidebar: {
-      width: "250px",
-      padding: "1rem",
-      background: "#f9f9f9",
-      borderRight: "1px solid #ddd",
-    },
-    filterGroup: {
-      marginBottom: "1.5rem",
-    },
-    label: {
-      fontWeight: "bold",
-      marginBottom: "0.5rem",
-      display: "block",
-    },
-    select: {
-      width: "100%",
-      padding: "0.5rem",
-    },
-    input: {
-      width: "100%",
-      padding: "0.5rem",
-    },
-  };
-
   return (
-    <div style={styles.sidebar}>
-      <h4>Filter Mentors</h4>
-      <div style={styles.filterGroup}>
-        <label htmlFor="skill-filter" style={styles.label}>
-          By Skill:
-        </label>
-        <select
-          id="skill-filter"
-          onChange={(e) => onSkillChange(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">All Skills</option>
-          {skills.map((skill) => (
-            <option key={skill} value={skill}>
-              {skill}
-            </option>
-          ))}
-        </select>
+    <aside className="w-full md:w-64 lg:w-72 flex-shrink-0">
+      <div className="bg-white p-6 rounded-lg shadow-lg sticky top-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+        <div className="space-y-6">
+          <div>
+            <label
+              htmlFor="search-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Search by Name or Bio
+            </label>
+            <input
+              id="search-filter"
+              type="text"
+              placeholder="e.g., John Doe"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="skill-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Filter by Skill
+            </label>
+            <select
+              id="skill-filter"
+              value={selectedSkill}
+              onChange={(e) => onSkillChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value="">All Skills</option>
+              {skills.map((skill) => (
+                <option key={skill} value={skill}>
+                  {skill}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
-      <div style={styles.filterGroup}>
-        <label htmlFor="industry-filter" style={styles.label}>
-          By Industry:
-        </label>
-        <input
-          id="industry-filter"
-          type="text"
-          placeholder="e.g., Technology"
-          onChange={(e) => onIndustryChange(e.target.value)}
-          style={styles.input}
-        />
-      </div>
-    </div>
+    </aside>
   );
 };
 

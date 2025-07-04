@@ -9,6 +9,7 @@ const AdminSessionsPage = () => {
 
   useEffect(() => {
     const fetchSessions = async () => {
+      setIsLoading(true);
       try {
         const response = await apiClient.get("/admin/sessions");
         setSessions(response.data.sessions);
@@ -22,45 +23,71 @@ const AdminSessionsPage = () => {
     fetchSessions();
   }, []);
 
-  if (isLoading) return <p>Loading all sessions...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-
-  const styles = {
-    th: {
-      border: "1px solid #ddd",
-      padding: "8px",
-      textAlign: "left",
-      background: "#f2f2f2",
-    } as React.CSSProperties,
-    td: { border: "1px solid #ddd", padding: "8px" } as React.CSSProperties,
-  };
+  if (isLoading)
+    return <p className="text-center text-gray-500">Loading all sessions...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
 
   return (
     <div>
-      <h2>All Sessions</h2>
-      <h3>Total Sessions Held: {totalCount}</h3>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Mentor</th>
-            <th style={styles.th}>Mentee</th>
-            <th style={styles.th}>Session Date</th>
-            <th style={styles.th}>Feedback Rating</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((session) => (
-            <tr key={session.id}>
-              <td style={styles.td}>{session.mentor.profile?.name}</td>
-              <td style={styles.td}>{session.mentee.profile?.name}</td>
-              <td style={styles.td}>
-                {new Date(session.date).toLocaleString()}
-              </td>
-              <td style={styles.td}>{session.rating || "N/A"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        All Platform Sessions
+      </h1>
+
+      <div className="mb-6">
+        <div className="bg-blue-500 text-white rounded-lg shadow-lg p-6">
+          <h2 className="text-lg font-semibold">Total Sessions Held</h2>
+          <p className="text-4xl font-bold">{totalCount}</p>
+        </div>
+      </div>
+
+      {sessions.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md">
+          <ul className="divide-y divide-gray-200">
+            {sessions.map((session) => (
+              <li
+                key={session.id}
+                className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              >
+                <div className="flex-grow">
+                  <p className="font-semibold text-gray-800">
+                    <span className="font-bold">
+                      {session.mentor.profile?.name || "N/A"}
+                    </span>{" "}
+                    (Mentor) &amp;{" "}
+                    <span className="font-bold">
+                      {session.mentee.profile?.name || "N/A"}
+                    </span>{" "}
+                    (Mentee)
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(session.date).toLocaleString([], {
+                      dateStyle: "full",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </div>
+                <div className="w-full sm:w-auto flex justify-end">
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">Rating</p>
+                    <p className="font-bold text-lg text-gray-800">
+                      {session.rating ? `${session.rating} ★` : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="text-center py-16 px-6 bg-white rounded-lg shadow-md">
+          <h3 className="text-xl font-semibold text-gray-800">
+            No Sessions Found
+          </h3>
+          <p className="text-gray-500 mt-2">
+            There are no completed or upcoming sessions in the system yet.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,7 @@
-import { RequestStatus } from "@prisma/client";
+import { Request, Response } from "express";
+import { PrismaClient, RequestStatus } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 const getUserIdForRequest = (req: Request): string | null => {
   if (!req.user) return null;
@@ -24,7 +27,21 @@ export const createRequest = async (
   try {
     const newRequest = await prisma.mentorshipRequest.create({
       data: { menteeId, mentorId, status: "PENDING" },
+      include: { mentee: { include: { profile: true } } },
     });
+
+    // --- Create Notification for Mentor ---
+    await prisma.notification.create({
+      data: {
+        userId: mentorId,
+        type: "NEW_MENTORSHIP_REQUEST",
+        message: `You have a new mentorship request from ${
+          newRequest.mentee.profile?.name || "a new mentee"
+        }.`,
+        link: `/requests`,
+      },
+    });
+
     res.status(201).json(newRequest);
   } catch (error) {
     res.status(500).json({ message: "Server error while creating request" });
@@ -43,7 +60,7 @@ export const getSentRequests = async (
   try {
     const requests = await prisma.mentorshipRequest.findMany({
       where: { menteeId },
-      include: { mentor: { select: { profile: true } } },
+      include: { mentor: { select: { id: true, profile: true } } }, // included mentorId
       orderBy: { createdAt: "desc" },
     });
     res.status(200).json(requests);
@@ -93,6 +110,7 @@ export const updateRequestStatus = async (
   try {
     const request = await prisma.mentorshipRequest.findUnique({
       where: { id },
+      include: { mentor: { include: { profile: true } } },
     });
     if (!request || request.mentorId !== mentorId) {
       res.status(404).json({ message: "Request not found or access denied" });
@@ -102,8 +120,38 @@ export const updateRequestStatus = async (
       where: { id },
       data: { status: status as RequestStatus },
     });
+
+    // If the request was accepted, create a conversation
+    if (status === "ACCEPTED") {
+      await prisma.conversation.create({
+        data: {
+          participantIDs: [request.mentorId, request.menteeId],
+        },
+      });
+      // --- Create Notification for Mentee ---
+      await prisma.notification.create({
+        data: {
+          userId: request.menteeId,
+          type: "MENTORSHIP_REQUEST_ACCEPTED",
+          message: `Your request with ${request.mentor.profile?.name} has been accepted!`,
+          link: "/my-mentors",
+        },
+      });
+    } else if (status === "REJECTED") {
+      // --- Create Notification for Mentee ---
+      await prisma.notification.create({
+        data: {
+          userId: request.menteeId,
+          type: "MENTORSHIP_REQUEST_REJECTED",
+          message: `Your request with ${request.mentor.profile?.name} was declined.`,
+          link: "/my-requests",
+        },
+      });
+    }
+
     res.status(200).json(updatedRequest);
   } catch (error) {
+    console.error("Error updating request status:", error);
     res.status(500).json({ message: "Server error while updating request" });
   }
 };

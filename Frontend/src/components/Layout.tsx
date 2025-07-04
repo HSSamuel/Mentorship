@@ -6,18 +6,12 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const styles = {
-    container: {
-      maxWidth: "1200px",
-      margin: "0 auto",
-      padding: "2rem",
-    },
-  };
-
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <main style={styles.container}>{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </main>
     </div>
   );
 };

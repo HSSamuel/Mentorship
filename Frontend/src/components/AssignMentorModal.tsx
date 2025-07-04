@@ -19,44 +19,26 @@ const AssignMentorModal = ({
     }
   };
 
-  const styles = {
-    modalBackdrop: {
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      background: "rgba(0,0,0,0.5)",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    } as React.CSSProperties,
-    modalContent: {
-      background: "white",
-      padding: "20px",
-      borderRadius: "8px",
-      width: "400px",
-    } as React.CSSProperties,
-    formGroup: { marginBottom: "15px" } as React.CSSProperties,
-    buttonGroup: {
-      display: "flex",
-      justifyContent: "flex-end",
-      gap: "10px",
-    } as React.CSSProperties,
-  };
-
   return (
-    <div style={styles.modalBackdrop}>
-      <div style={styles.modalContent}>
-        <h3>Assign a Mentor</h3>
-        <div style={styles.formGroup}>
-          <label>Select Mentor:</label>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md m-4">
+        <h3 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Assign a Mentor
+        </h3>
+        <div className="mb-6">
+          <label
+            htmlFor="mentor-select"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Select a Mentor from the list
+          </label>
           <select
+            id="mentor-select"
             value={selectedMentor}
             onChange={(e) => setSelectedMentor(e.target.value)}
-            style={{ width: "100%", padding: "8px" }}
+            className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           >
-            <option value="">--Select a Mentor--</option>
+            <option value="">-- Please select a mentor --</option>
             {mentors.map((mentor) => (
               <option key={mentor.id} value={mentor.id}>
                 {mentor.profile?.name || mentor.email}
@@ -64,14 +46,19 @@ const AssignMentorModal = ({
             ))}
           </select>
         </div>
-        <div style={styles.buttonGroup}>
-          <button type="button" onClick={onClose}>
+        <div className="flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleAssign}
             disabled={!selectedMentor}
+            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Assign
           </button>

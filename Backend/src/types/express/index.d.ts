@@ -1,16 +1,16 @@
 import { User as PrismaUser } from "@prisma/client";
 
-// Define the shape of the user object from our JWT
-type JwtUser = {
+// Define a unified User type for the request
+interface RequestUser extends PrismaUser {
   userId: string;
-  role: string;
-};
+  role: "ADMIN" | "MENTOR" | "MENTEE";
+}
 
 // Extend the Express Request interface
 declare global {
   namespace Express {
     export interface Request {
-      user?: JwtUser | PrismaUser;
+      user?: RequestUser;
     }
   }
 }

@@ -5,14 +5,23 @@ import {
   getMenteeStats,
   getAllMentors,
   getAvailableSkills,
+  getMentorPublicProfile, // Import the new controller
 } from "../controllers/user.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import { validateRequest } from "../middleware/validateRequest";
 
 const router = Router();
 
-// Existing routes
+// New public route for mentor profiles
+router.get(
+  "/mentor/:id",
+  [param("id").isMongoId().withMessage("Invalid mentor ID")],
+  validateRequest,
+  getMentorPublicProfile
+);
+
+// Existing authenticated routes
 router.put(
   "/me/profile",
   authMiddleware,
@@ -28,8 +37,6 @@ router.put(
 
 router.get("/mentor/stats", authMiddleware, getMentorStats);
 router.get("/mentee/stats", authMiddleware, getMenteeStats);
-
-// New routes for the "Find a Mentor" page
 router.get("/mentors", authMiddleware, getAllMentors);
 router.get("/skills", authMiddleware, getAvailableSkills);
 

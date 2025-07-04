@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage"; // Import the new page
+import RegisterPage from "./pages/RegisterPage";
 import ProfileEditPage from "./pages/ProfileEditPage";
 import MentorListPage from "./pages/MentorListPage";
 import MentorRequestsPage from "./pages/MentorRequestsPage";
@@ -14,6 +14,8 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminMatchesPage from "./pages/AdminMatchesPage";
 import AdminSessionsPage from "./pages/AdminSessionsPage";
 import DashboardPage from "./pages/DashboardPage";
+import MessagesPage from "./pages/MessagesPage";
+import MentorProfilePage from "./pages/MentorProfilePage"; // Import the new page
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
@@ -21,11 +23,21 @@ function App() {
   return (
     <Layout>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />{" "}
-        {/* Add register route */}
-        <Route path="/profile/edit" element={<ProfileEditPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/mentor/:id" element={<MentorProfilePage />} />{" "}
+        {/* Add public mentor profile route */}
+        {/* Protected Routes */}
+        <Route
+          path="/profile/edit"
+          element={
+            <ProtectedRoute>
+              <ProfileEditPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
@@ -90,6 +102,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Admin Routes */}
         <Route
           path="/admin/users"
           element={

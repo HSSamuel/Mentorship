@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Or your preferred SQL database
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  role              Role      @default(MENTEE)
+  createdAt         DateTime  @default(now())
+  
+  profile           Profile?
+  availability      Availability[]
+  
+  sentRequests      MentorshipRequest[] @relation("MenteeRequests")
+  receivedRequests  MentorshipRequest[] @relation("MentorRequests")
+  
+  mentorSessions    Session[]           @relation("MentorSessions")
+  menteeSessions    Session[]           @relation("MenteeSessions")
+}
+
+model Profile {
+  id        String    @id @default(cuid())
+  name      String
+  bio       String?
+  skills    String[]
+  goals     String[]
+  
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String    @unique
+}
+
+model Availability {
+  id          String   @id @default(cuid())
+  day         String   // e.g., "Monday"
+  startTime   String   // e.g., "14:00"
+  endTime     String   // e.g., "16:00"
+  
+  mentor      User     @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  mentorId    String
+}
+
+model MentorshipRequest {
+  id        String        @id @default(cuid())
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  mentee    User          @relation("MenteeRequests", fields: [menteeId], references: [id])
+  menteeId  String
+  
+  mentor    User          @relation("MentorRequests", fields: [mentorId], references: [id])
+  mentorId  String
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  date      DateTime
+  rating    Int?
+  feedback  String?
+  
+  mentor    User      @relation("MentorSessions", fields: [mentorId], references: [id])
+  mentorId  String
+  
+  mentee    User      @relation("MenteeSessions", fields: [menteeId], references: [id])
+  menteeId  String
+}
+
+enum Role {
+  ADMIN
+  MENTOR
+  MENTEE
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}

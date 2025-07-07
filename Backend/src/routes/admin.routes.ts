@@ -11,11 +11,15 @@ import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.get("/users", authMiddleware, adminMiddleware, getAllUsers);
-router.put("/users/:id/role", authMiddleware, adminMiddleware, updateUserRole);
-router.get("/matches", authMiddleware, adminMiddleware, getAllMatches);
-router.get("/sessions", authMiddleware, adminMiddleware, getAllSessions);
-router.post("/assign", authMiddleware, adminMiddleware, assignMentor);
-router.get("/stats", authMiddleware, adminMiddleware, getStats);
+// This line applies the authentication and admin checks to ALL routes in this file.
+router.use(authMiddleware, adminMiddleware);
+
+// Define the routes without repeating the middleware
+router.get("/users", getAllUsers);
+router.put("/users/:id/role", updateUserRole);
+router.get("/matches", getAllMatches);
+router.get("/sessions", getAllSessions);
+router.post("/assign", assignMentor);
+router.get("/stats", getStats);
 
 export default router;

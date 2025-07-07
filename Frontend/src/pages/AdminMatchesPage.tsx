@@ -33,8 +33,14 @@ const AdminMatchesPage = () => {
       try {
         const response = await apiClient.get("/admin/matches");
         setMatches(response.data);
-      } catch (err) {
-        setError("Failed to fetch matches.");
+      } catch (err: any) {
+        // Updated Error Handling: Show the specific message from the backend
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch matches.";
+        setError(errorMessage);
+        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -44,7 +50,9 @@ const AdminMatchesPage = () => {
 
   if (isLoading)
     return <p className="text-center text-gray-500">Loading all matches...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+
+  // Updated: Display the detailed error message
+  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
 
   return (
     <div>

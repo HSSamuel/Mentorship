@@ -17,13 +17,29 @@ const SessionsListPage = () => {
     const fetchSessions = async () => {
       if (!user) return;
       setIsLoading(true);
-      const endpoint =
-        user.role === "MENTOR" ? "/sessions/mentor" : "/sessions/mentee";
+
+      let endpoint = "";
+      // Corrected: Determine the correct API endpoint based on user role
+      if (user.role === "ADMIN") {
+        endpoint = "/admin/sessions";
+      } else if (user.role === "MENTOR") {
+        endpoint = "/sessions/mentor";
+      } else {
+        endpoint = "/sessions/mentee";
+      }
+
       try {
         const response = await apiClient.get(endpoint);
-        setSessions(response.data);
-      } catch (err) {
-        setError("Failed to load sessions.");
+        // The admin endpoint returns data in a different shape
+        const sessionData =
+          user.role === "ADMIN" ? response.data.sessions : response.data;
+        setSessions(sessionData);
+      } catch (err: any) {
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to load sessions.";
+        setError(errorMessage);
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -61,7 +77,8 @@ const SessionsListPage = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
               <h4 className="text-lg font-bold text-gray-800">
-                Session with {otherUser.profile.name}
+                {/* Handle cases where otherUser might not exist */}
+                Session with {otherUser?.profile?.name || "a user"}
               </h4>
               <p className="text-sm text-gray-500">
                 {sessionDate.toLocaleString([], {
@@ -84,7 +101,7 @@ const SessionsListPage = () => {
             </div>
           </div>
         </div>
-        {activeTab === "past" && !hasFeedback && (
+        {activeTab === "past" && !hasFeedback && user?.role !== "ADMIN" && (
           <div className="bg-gray-50 px-6 py-4 flex justify-end">
             <button
               onClick={() => handleOpenFeedbackModal(session)}
@@ -133,7 +150,8 @@ const SessionsListPage = () => {
     return (
       <p className="text-center text-gray-500">Loading your sessions...</p>
     );
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+
+  if (error) return <p className="text-center text-red-500">Error: {error}</p>;
 
   return (
     <div>

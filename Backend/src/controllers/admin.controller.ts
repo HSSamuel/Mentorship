@@ -3,6 +3,39 @@ import { PrismaClient, Role } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// GET /admin/matches
+export const getAllMatches = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Corrected: Removed the invalid 'where' clause to fix the compilation error.
+    const matches = await prisma.mentorshipRequest.findMany({
+      include: {
+        mentor: {
+          select: {
+            id: true,
+            email: true,
+            profile: true,
+          },
+        },
+        mentee: {
+          select: {
+            id: true,
+            email: true,
+            profile: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.status(200).json(matches);
+  } catch (error) {
+    console.error("Error fetching matches:", error);
+    res.status(500).json({ message: "Error fetching matches." });
+  }
+};
+
 // GET /admin/users
 export const getAllUsers = async (
   req: Request,
@@ -34,25 +67,6 @@ export const updateUserRole = async (
     res.status(200).json(userWithoutPassword);
   } catch (error) {
     res.status(500).json({ message: "Error updating user role." });
-  }
-};
-
-// GET /admin/matches
-export const getAllMatches = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const matches = await prisma.mentorshipRequest.findMany({
-      include: {
-        mentor: { select: { profile: true } },
-        mentee: { select: { profile: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    res.status(200).json(matches);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching matches." });
   }
 };
 

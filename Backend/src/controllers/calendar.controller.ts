@@ -15,10 +15,12 @@ const getUserId = (req: Request): string | null => {
 /**
  * Redirects the user to the Google consent screen.
  */
-export const googleAuth = (req: Request, res: Response) => {
+export const googleAuth = (req: Request, res: Response): void => {
   const userId = getUserId(req);
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return'
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
   const url = generateAuthUrl(userId);
   res.redirect(url);
@@ -27,14 +29,17 @@ export const googleAuth = (req: Request, res: Response) => {
 /**
  * Handles the callback from Google after user grants permission.
  */
-export const googleAuthCallback = async (req: Request, res: Response) => {
+export const googleAuthCallback = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { code, state } = req.query;
   const userId = state as string; // The userId we passed in the state
 
   if (!code) {
-    return res
-      .status(400)
-      .send("Error: Google did not return an authorization code.");
+    // Corrected: Removed 'return'
+    res.status(400).send("Error: Google did not return an authorization code.");
+    return;
   }
 
   try {

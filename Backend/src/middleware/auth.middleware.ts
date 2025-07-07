@@ -9,16 +9,29 @@ export const authMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
+  let token: string | undefined;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+
+  // First, check for the token in the Authorization header
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  }
+  // If not found, check for it in the query parameters
+  else if (req.query && req.query.token) {
+    token = req.query.token as string;
+  }
+
+  // If no token is found in either place, send an error
+  if (!token) {
     res.status(401).json({ message: "Authentication token required" });
     return;
   }
-  const token = authHeader.split(" ")[1];
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as {
       userId: string;
       role: string;
+      email: string;
     };
     req.user = decoded; // This now matches our global type definition
     next();

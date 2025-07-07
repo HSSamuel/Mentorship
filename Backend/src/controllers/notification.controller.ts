@@ -9,10 +9,15 @@ const getUserId = (req: Request): string | null => {
 };
 
 // GET /notifications
-export const getNotifications = async (req: Request, res: Response) => {
+export const getNotifications = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return' and added an explicit 'return' to exit
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {
@@ -27,12 +32,17 @@ export const getNotifications = async (req: Request, res: Response) => {
 };
 
 // PUT /notifications/:id/read
-export const markAsRead = async (req: Request, res: Response) => {
+export const markAsRead = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { id } = req.params;
 
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return' and added an explicit 'return' to exit
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {
@@ -49,10 +59,15 @@ export const markAsRead = async (req: Request, res: Response) => {
 };
 
 // PUT /notifications/read-all
-export const markAllAsRead = async (req: Request, res: Response) => {
+export const markAllAsRead = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return' and added an explicit 'return' to exit
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {

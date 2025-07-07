@@ -86,7 +86,7 @@ const DashboardPage = () => {
         if (user.role === "ADMIN") {
           response = await apiClient.get("/admin/stats");
         } else if (user.role === "MENTOR") {
-          response = await apiClient.get("/users/mentor/stats");
+          response = await apiClient.get(`/users/mentor/${user.id}/stats`);
         } else {
           response = await apiClient.get("/users/mentee/stats");
         }
@@ -215,11 +215,25 @@ const DashboardPage = () => {
     </div>
   );
 
+  // Helper function to format the role string for display
+  const formatRole = (role: string) => {
+    if (!role) return "";
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-2">
         Welcome back, {user?.profile?.name || user?.email.split("@")[0]}!
       </h1>
+
+      {/* Role indicator badge */}
+      {user?.role && (
+        <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full mb-6">
+          You are logged in as a {formatRole(user.role)}
+        </span>
+      )}
+
       <p className="text-gray-600 mb-8">
         Here's a summary of your activity on the platform.
       </p>

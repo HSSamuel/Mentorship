@@ -13,10 +13,15 @@ const getUserId = (req: Request): string | null => {
  * Get all conversations for the logged-in user.
  * Includes the participants and the last message for a preview.
  */
-export const getConversations = async (req: Request, res: Response) => {
+export const getConversations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return' and added an explicit 'return' to exit
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {
@@ -61,12 +66,17 @@ export const getConversations = async (req: Request, res: Response) => {
  * Get all messages for a specific conversation.
  * Ensures the logged-in user is a participant of the conversation before returning messages.
  */
-export const getMessages = async (req: Request, res: Response) => {
+export const getMessages = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { conversationId } = req.params;
 
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return' and added an explicit 'return' to exit
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {
@@ -81,12 +91,12 @@ export const getMessages = async (req: Request, res: Response) => {
     });
 
     if (!conversation) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Access denied. You are not a participant in this conversation.",
-        });
+      // Corrected: Removed 'return' and added an explicit 'return' to exit
+      res.status(403).json({
+        message:
+          "Access denied. You are not a participant in this conversation.",
+      });
+      return;
     }
 
     // If they are a participant, fetch all messages for that conversation

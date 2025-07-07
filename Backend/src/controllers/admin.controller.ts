@@ -4,7 +4,10 @@ import { PrismaClient, Role } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // GET /admin/users
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
       include: { profile: true },
@@ -16,7 +19,10 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 // PUT /admin/users/:id/role
-export const updateUserRole = async (req: Request, res: Response) => {
+export const updateUserRole = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
   const { role } = req.body;
   try {
@@ -32,7 +38,10 @@ export const updateUserRole = async (req: Request, res: Response) => {
 };
 
 // GET /admin/matches
-export const getAllMatches = async (req: Request, res: Response) => {
+export const getAllMatches = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const matches = await prisma.mentorshipRequest.findMany({
       include: {
@@ -48,7 +57,10 @@ export const getAllMatches = async (req: Request, res: Response) => {
 };
 
 // GET /admin/sessions
-export const getAllSessions = async (req: Request, res: Response) => {
+export const getAllSessions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const sessions = await prisma.session.findMany({
       include: {
@@ -64,7 +76,11 @@ export const getAllSessions = async (req: Request, res: Response) => {
   }
 };
 
-export const assignMentor = async (req: Request, res: Response) => {
+// POST /admin/assign
+export const assignMentor = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { menteeId, mentorId } = req.body;
 
   if (!menteeId || !mentorId) {
@@ -87,7 +103,8 @@ export const assignMentor = async (req: Request, res: Response) => {
   }
 };
 
-export const getStats = async (req: Request, res: Response) => {
+// GET /admin/stats
+export const getStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const totalUsers = await prisma.user.count();
     const totalMatches = await prisma.mentorshipRequest.count({

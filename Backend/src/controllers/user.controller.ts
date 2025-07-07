@@ -3,14 +3,16 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Corrected helper function with a type assertion to resolve the error.
 const getUserIdFromRequest = (req: Request): string | null => {
-  if (!req.user) return null;
-  if ("userId" in req.user) return req.user.userId as string;
-  if ("id" in req.user) return req.user.id as string;
+  // We use a type assertion here to tell TypeScript the exact shape of our user object.
+  if (req.user && "userId" in req.user) {
+    return (req.user as { userId: string }).userId;
+  }
   return null;
 };
 
-// New function to get a single mentor's public profile
+// GET a single mentor's public profile
 export const getMentorPublicProfile = async (
   req: Request,
   res: Response
@@ -27,6 +29,7 @@ export const getMentorPublicProfile = async (
             bio: true,
             skills: true,
             goals: true,
+            avatarUrl: true,
           },
         },
       },
@@ -36,13 +39,13 @@ export const getMentorPublicProfile = async (
       res.status(404).json({ message: "Mentor not found." });
       return;
     }
-
     res.status(200).json(mentor);
   } catch (error) {
     res.status(500).json({ message: "Error fetching mentor profile." });
   }
 };
 
+// GET all mentors
 export const getAllMentors = async (
   req: Request,
   res: Response
@@ -62,20 +65,32 @@ export const getAllMentors = async (
   }
 };
 
+// GET available skills
 export const getAvailableSkills = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   const skills = [
-    "Marketing",
-    "UI/UX",
-    "Backend Development",
-    "Product Management",
-    "Fundraising",
+    "Virtual Assistant",
+    "UI/UX Designer",
+    "Software Development",
+    "Video Editing",
+    "Cybersecurity",
+    "DevOps & Automation",
+    "AI/ML",
+    "Data Science",
+    "Digital Marketing",
+    "Graphic Design",
+    "Project Management",
+    "Content Creation",
+    "Internet of Things (IoT)",
+    "Cloud Computing",
+    "Quantum Computing",
   ];
   res.status(200).json(skills);
 };
 
+// PUT (update or create) the user's own profile, including avatar
 export const updateMyProfile = async (
   req: Request,
   res: Response
@@ -85,19 +100,41 @@ export const updateMyProfile = async (
     res.status(401).json({ message: "Authentication error" });
     return;
   }
+
   const { name, bio, skills, goals } = req.body;
+  let avatarUrl: string | undefined = undefined;
+
+  if (req.file) {
+    avatarUrl = `/uploads/${req.file.filename}`;
+  }
+
   try {
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: { name, bio, skills, goals },
-      create: { userId, name, bio, skills, goals },
+      update: {
+        name,
+        bio,
+        skills: skills || [],
+        goals,
+        ...(avatarUrl && { avatarUrl }),
+      },
+      create: {
+        userId,
+        name,
+        bio,
+        skills: skills || [],
+        goals,
+        ...(avatarUrl && { avatarUrl }),
+      },
     });
     res.status(200).json(profile);
   } catch (error) {
+    console.error("Error updating profile:", error);
     res.status(500).json({ message: "Error updating profile" });
   }
 };
 
+// GET statistics for a mentor
 export const getMentorStats = async (
   req: Request,
   res: Response
@@ -123,6 +160,7 @@ export const getMentorStats = async (
   }
 };
 
+// GET statistics for a mentee
 export const getMenteeStats = async (
   req: Request,
   res: Response

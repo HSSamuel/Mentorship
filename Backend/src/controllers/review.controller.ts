@@ -9,12 +9,17 @@ const getUserId = (req: Request): string | null => {
 };
 
 // POST /reviews
-export const createReview = async (req: Request, res: Response) => {
+export const createReview = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { mentorshipRequestId, rating, comment } = req.body;
 
   if (!userId) {
-    return res.status(401).json({ message: "Authentication error" });
+    // Corrected: Removed 'return'
+    res.status(401).json({ message: "Authentication error" });
+    return;
   }
 
   try {
@@ -28,9 +33,11 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     if (!mentorship) {
-      return res
+      // Corrected: Removed 'return'
+      res
         .status(403)
         .json({ message: "You are not authorized to review this mentorship." });
+      return;
     }
 
     // Check if a review for this mentorship already exists
@@ -39,9 +46,11 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     if (existingReview) {
-      return res
+      // Corrected: Removed 'return'
+      res
         .status(400)
         .json({ message: "A review for this mentorship already exists." });
+      return;
     }
 
     const newReview = await prisma.review.create({
@@ -60,7 +69,10 @@ export const createReview = async (req: Request, res: Response) => {
 };
 
 // GET /reviews/mentor/:mentorId
-export const getReviewsForMentor = async (req: Request, res: Response) => {
+export const getReviewsForMentor = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { mentorId } = req.params;
 
   try {

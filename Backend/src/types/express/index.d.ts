@@ -1,12 +1,11 @@
-import { User as PrismaUser } from "@prisma/client";
+import { Role } from "@prisma/client";
 
-// Define a unified User type for the request
-interface RequestUser extends PrismaUser {
+interface RequestUser {
   userId: string;
-  role: "ADMIN" | "MENTOR" | "MENTEE";
+  role: Role;
+  email: string;
 }
 
-// Extend the Express Request interface
 declare global {
   namespace Express {
     export interface Request {

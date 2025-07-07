@@ -9,9 +9,18 @@ const getUserId = (req: Request): string | null => {
 };
 
 // GET goals for a specific mentorship
-export const getGoalsForMentorship = async (req: Request, res: Response) => {
+export const getGoalsForMentorship = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { mentorshipId } = req.params;
+
+  // Added check: Ensure user is authenticated before proceeding.
+  if (!userId) {
+    res.status(401).json({ message: "Authentication error" });
+    return;
+  }
 
   try {
     const mentorship = await prisma.mentorshipRequest.findFirst({
@@ -22,9 +31,10 @@ export const getGoalsForMentorship = async (req: Request, res: Response) => {
     });
 
     if (!mentorship) {
-      return res
+      res
         .status(404)
         .json({ message: "Mentorship not found or access denied." });
+      return;
     }
 
     const goals = await prisma.goal.findMany({
@@ -39,9 +49,18 @@ export const getGoalsForMentorship = async (req: Request, res: Response) => {
 };
 
 // POST a new goal
-export const createGoal = async (req: Request, res: Response) => {
+export const createGoal = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { mentorshipRequestId, title, description } = req.body;
+
+  // Added check: Ensure user is authenticated before proceeding.
+  if (!userId) {
+    res.status(401).json({ message: "Authentication error" });
+    return;
+  }
 
   try {
     const mentorship = await prisma.mentorshipRequest.findFirst({
@@ -52,9 +71,10 @@ export const createGoal = async (req: Request, res: Response) => {
     });
 
     if (!mentorship) {
-      return res
+      res
         .status(404)
         .json({ message: "Mentorship not found or you are not the mentee." });
+      return;
     }
 
     const newGoal = await prisma.goal.create({
@@ -68,10 +88,19 @@ export const createGoal = async (req: Request, res: Response) => {
 };
 
 // PUT (update) a goal
-export const updateGoal = async (req: Request, res: Response) => {
+export const updateGoal = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { goalId } = req.params;
   const { title, description, isCompleted } = req.body;
+
+  // Added check: Ensure user is authenticated before proceeding.
+  if (!userId) {
+    res.status(401).json({ message: "Authentication error" });
+    return;
+  }
 
   try {
     const goal = await prisma.goal.findUnique({
@@ -80,9 +109,10 @@ export const updateGoal = async (req: Request, res: Response) => {
     });
 
     if (!goal || goal.mentorshipRequest.menteeId !== userId) {
-      return res
+      res
         .status(404)
         .json({ message: "Goal not found or you are not the mentee." });
+      return;
     }
 
     const updatedGoal = await prisma.goal.update({
@@ -97,9 +127,18 @@ export const updateGoal = async (req: Request, res: Response) => {
 };
 
 // DELETE a goal
-export const deleteGoal = async (req: Request, res: Response) => {
+export const deleteGoal = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = getUserId(req);
   const { goalId } = req.params;
+
+  // Added check: Ensure user is authenticated before proceeding.
+  if (!userId) {
+    res.status(401).json({ message: "Authentication error" });
+    return;
+  }
 
   try {
     const goal = await prisma.goal.findUnique({
@@ -108,9 +147,10 @@ export const deleteGoal = async (req: Request, res: Response) => {
     });
 
     if (!goal || goal.mentorshipRequest.menteeId !== userId) {
-      return res
+      res
         .status(404)
         .json({ message: "Goal not found or you are not the mentee." });
+      return;
     }
 
     await prisma.goal.delete({

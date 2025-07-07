@@ -59,9 +59,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign(
+      { userId: user.id, role: user.role, email: user.email },
+      JWT_SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
     res.status(200).json({ token });
   } catch (error) {
     res.status(500).json({ message: "Server error during login" });
@@ -77,7 +81,15 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, role: true, profile: true },
+      // Corrected: Added googleAccessToken and googleRefreshToken to the select query
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        profile: true,
+        googleAccessToken: true,
+        googleRefreshToken: true,
+      },
     });
     res.status(200).json(user);
   } catch (error) {

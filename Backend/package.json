@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npx tsc",
-    "start": "NODE_OPTIONS='--use-openssl-ca' node dist/index.js",
+    "start": "cross-env NODE_OPTIONS='--use-openssl-ca' node dist/index.js",
     "dev": "nodemon src/index.ts"
   },
   "keywords": [],
@@ -20,7 +20,9 @@
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
     "cohere-ai": "^7.17.1",
+    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
     "express-rate-limit": "^7.3.1",

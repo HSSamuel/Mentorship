@@ -1,11 +1,13 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "npx tsc",
-    "start": "cross-env NODE_OPTIONS='--use-openssl-ca' node dist/index.js",
-    "dev": "nodemon src/index.ts"
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node --max-old-space-size=4096 dist/index.js",
+    "postinstall": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +40,7 @@
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
     "passport-google-oauth20": "^2.0.0",
+    "resend": "^4.6.0",
     "socket.io": "^4.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",

@@ -54,7 +54,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "public", "uploads"))
+);
 
 // --- Session Middleware with MongoStore ---
 app.use(
@@ -94,6 +97,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/calendar", calendarRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api", apiRouter);
 
 app.use(jsonErrorHandler);
 

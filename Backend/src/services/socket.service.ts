@@ -5,20 +5,20 @@ import jwt from "jsonwebtoken";
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
 
-// Extend the Socket interface to include the custom 'user' property.
+// Updated interface to handle the unique video token payload
 interface CustomSocket extends Socket {
   user?: {
     userId: string;
+    sessionId: string; // The token now includes the session ID
   };
 }
 
-// Global map to store user online status and last seen timestamp
+let io: SocketIOServer;
+
 const userStatuses = new Map<
   string,
   { isOnline: boolean; lastSeen: Date | null }
 >();
-
-let io: SocketIOServer;
 
 const emitUserStatusChange = (
   userId: string,
@@ -26,238 +26,94 @@ const emitUserStatusChange = (
 ) => {
   if (io) {
     io.emit("userStatusChange", { userId, ...status });
-    console.log(
-      `Emitting status change for ${userId}: ${status.isOnline ? "Online" : "Offline"} (Last Seen: ${status.lastSeen ? status.lastSeen.toISOString() : "N/A"})`
-    );
-  } else {
-    console.error(
-      "Socket.IO 'io' instance not initialized when trying to emit user status change."
-    );
   }
 };
 
 export const initializeSocket = (ioInstance: SocketIOServer) => {
   io = ioInstance;
+  console.log("✅ Socket.IO service initialized.");
 
+  // --- Authentication Middleware for all incoming socket connections ---
   io.use((socket: CustomSocket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
+      console.error(
+        "Auth Error: Socket connection rejected. Token not provided."
+      );
       return next(new Error("Authentication error: Token not provided."));
     }
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      socket.user = { userId: decoded.userId };
+      // Decode the unique videoToken which contains both userId and sessionId
+      const decoded = jwt.verify(token, JWT_SECRET) as {
+        userId: string;
+        sessionId: string;
+      };
+      socket.user = { userId: decoded.userId, sessionId: decoded.sessionId };
       next();
     } catch (err) {
+      console.error("Auth Error: Socket connection rejected. Invalid token.");
       next(new Error("Authentication error: Invalid token."));
     }
   });
 
+  // --- Single, Unified Connection Handler ---
   io.on("connection", (socket: CustomSocket) => {
-    console.log(`🟢 User connected: ${socket.id}`);
+    const userId = socket.user?.userId;
+    const sessionId = socket.user?.sessionId; // Get sessionId from the authenticated token
 
-    const user = socket.user;
-    if (!user || !user.userId) {
-      console.error(`Socket ${socket.id} connected without a valid user ID.`);
+    if (!userId || !sessionId) {
+      console.error(
+        `Socket ${socket.id} connected but is missing user/session ID from its token.`
+      );
       socket.disconnect(true);
       return;
     }
 
-    userStatuses.set(user.userId, { isOnline: true, lastSeen: null });
-    emitUserStatusChange(user.userId, userStatuses.get(user.userId)!);
+    console.log(`\n🟢 User Connected:`);
+    console.log(`   - Socket ID: ${socket.id}`);
+    console.log(`   - User ID:   ${userId}`);
 
-    socket.join(user.userId);
-    console.log(`User ${user.userId} joined personal room.`);
-
-    socket.on("joinConversation", (conversationId: string) => {
-      socket.join(conversationId);
-      console.log(
-        `User ${user.userId} joined conversation room: ${conversationId}`
-      );
-    });
-
-    /**
-     * Event listener for sending a new message.
-     * This event saves the message to the database and broadcasts it.
-     */
-    socket.on(
-      "sendMessage",
-      async (data: { conversationId: string; content: string }) => {
-        try {
-          const { conversationId, content } = data;
-
-          const conversationExists = await prisma.conversation.findFirst({
-            where: {
-              id: conversationId,
-              participants: {
-                some: {
-                  id: user.userId,
-                },
-              },
-            },
-          });
-
-          if (!conversationExists) {
-            console.warn(
-              `User ${user.userId} attempted to send message to non-existent or unauthorized conversation ${conversationId}.`
-            );
-            socket.emit("messageError", {
-              message: "Unauthorized or conversation not found.",
-            });
-            return;
-          }
-
-          const message = await prisma.message.create({
-            data: {
-              conversationId,
-              content,
-              senderId: user.userId,
-            },
-            include: {
-              sender: { include: { profile: true } },
-              conversation: { include: { participants: true } },
-            },
-          });
-
-          await prisma.conversation.update({
-            where: { id: conversationId },
-            data: { updatedAt: new Date() },
-          });
-
-          io.to(conversationId).emit("receiveMessage", message); // Use the module-scoped 'io'
-          console.log(
-            `Message sent and broadcasted in conversation ${conversationId} by ${user.userId}.`
-          );
-
-          const recipient = message.conversation.participants.find(
-            (p) => p.id !== user.userId
-          );
-
-          if (recipient) {
-            const notification = await prisma.notification.create({
-              data: {
-                userId: recipient.id,
-                type: "NEW_MESSAGE",
-                message: `You have a new message from ${
-                  message.sender.profile?.name || "a user"
-                }.`,
-                link: `/messages/${conversationId}`,
-              },
-            });
-            io.to(recipient.id).emit("newNotification", notification); // Use the module-scoped 'io'
-            console.log(
-              `Notification sent to ${recipient.id} for new message.`
-            );
-          }
-        } catch (error) {
-          console.error("Error sending message:", error);
-          socket.emit("messageError", {
-            message: "Could not send message due to a server error.",
-          });
-        }
-      }
-    );
-
-    /**
-     * Event listener for when a goal is completed.
-     * This creates a notification for the mentor.
-     */
-    socket.on(
-      "goalCompleted",
-      async (data: { goalId: string; menteeId: string; mentorId: string }) => {
-        try {
-          const { menteeId, mentorId } = data;
-          const mentee = await prisma.user.findUnique({
-            where: { id: menteeId },
-            include: { profile: true },
-          });
-
-          if (mentee) {
-            const notification = await prisma.notification.create({
-              data: {
-                userId: mentorId,
-                type: "GOAL_COMPLETED",
-                message: `${
-                  mentee.profile?.name || "A mentee"
-                } has completed a goal!`,
-                link: `/my-mentors`,
-              },
-            });
-            io.to(mentorId).emit("newNotification", notification); // Use the module-scoped 'io'
-            console.log(
-              `Goal completion notification sent to mentor ${mentorId}.`
-            );
-          }
-        } catch (error) {
-          console.error("Error processing goal completion:", error);
-          socket.emit("notificationError", {
-            message: "Could not process goal completion notification.",
-          });
-        }
-      }
-    );
-
-    /**
-     * Event listener for when a mentor updates their availability.
-     * This creates notifications for their associated mentees.
-     */
-    socket.on("availabilityUpdated", async (data: { mentorId: string }) => {
-      try {
-        const { mentorId } = data;
-        const mentor = await prisma.user.findUnique({
-          where: { id: mentorId },
-          include: { profile: true },
-        });
-
-        if (mentor) {
-          const mentees = await prisma.mentorshipRequest.findMany({
-            where: { mentorId, status: "ACCEPTED" },
-            select: { menteeId: true },
-          });
-
-          for (const mentee of mentees) {
-            const notification = await prisma.notification.create({
-              data: {
-                userId: mentee.menteeId,
-                type: "AVAILABILITY_UPDATED",
-                message: `${
-                  mentor.profile?.name || "A mentor"
-                } has updated their availability.`,
-                link: `/book-session/${mentorId}`,
-              },
-            });
-            io.to(mentee.menteeId).emit("newNotification", notification); // Use the module-scoped 'io'
-            console.log(
-              `Availability update notification sent to mentee ${mentee.menteeId}.`
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error processing availability update:", error);
-        socket.emit("notificationError", {
-          message: "Could not process availability update notification.",
-        });
-      }
-    });
+    // --- User Presence and Status Handling (Existing Logic) ---
+    socket.join(userId); // Join a personal room for direct notifications
+    userStatuses.set(userId, { isOnline: true, lastSeen: null });
+    emitUserStatusChange(userId, { isOnline: true, lastSeen: null });
+    prisma.user
+      .update({ where: { id: userId }, data: { lastSeen: new Date() } })
+      .catch(console.error);
 
     // --- WebRTC Signaling Events ---
+    socket.on("join-room", (roomId: string) => {
+      if (roomId !== sessionId) {
+        console.warn(
+          `   - WARNING: User ${userId} tried to join room ${roomId} but their token is for room ${sessionId}.`
+        );
+        return;
+      }
+      socket.join(roomId);
+      console.log(`   - Action: User joined room ${roomId}`);
 
-    // This is triggered when the mentee is ready to call.
-    socket.on("mentee-ready", (data: { roomId: string }) => {
-      socket
-        .to(data.roomId)
-        .emit("incoming-call", { menteeSocketId: socket.id });
+      const clientsInRoom = io.sockets.adapter.rooms.get(roomId);
+      const otherUsers = Array.from(clientsInRoom || []).filter(
+        (id) => id !== socket.id
+      );
+
+      if (otherUsers.length > 0) {
+        const otherUserSocketId = otherUsers[0];
+        console.log(
+          `   - Signaling: Notifying ${socket.id} about existing user ${otherUserSocketId}`
+        );
+        socket.emit("other-user", otherUserSocketId);
+      } else {
+        console.log(
+          `   - Signaling: User is the first in the room. Waiting for another user.`
+        );
+      }
     });
 
-    // This is triggered when the mentor accepts the call.
-    socket.on("mentor-accepted", (data: { menteeSocketId: string }) => {
-      io.to(data.menteeSocketId).emit("mentor-joined", {
-        mentorSocketId: socket.id,
-      });
-    });
-
-    // These events relay the WebRTC connection data.
     socket.on("offer", (payload: { target: string; offer: any }) => {
+      console.log(
+        `   - Signaling: Relaying offer from ${socket.id} to ${payload.target}`
+      );
       io.to(payload.target).emit("offer", {
         from: socket.id,
         offer: payload.offer,
@@ -265,6 +121,13 @@ export const initializeSocket = (ioInstance: SocketIOServer) => {
     });
 
     socket.on("answer", (payload: { target: string; answer: any }) => {
+      // --- THIS IS THE NEW LOG MESSAGE THAT WAS ADDED ---
+      console.log(
+        `✅ Video Connected: Signaling complete between ${socket.id} and ${payload.target}`
+      );
+      console.log(
+        `   - Signaling: Relaying answer from ${socket.id} to ${payload.target}`
+      );
       io.to(payload.target).emit("answer", {
         from: socket.id,
         answer: payload.answer,
@@ -281,24 +144,38 @@ export const initializeSocket = (ioInstance: SocketIOServer) => {
       }
     );
 
-    // Handles joining the room initially.
-    socket.on("join-room", (roomId: string) => {
-      socket.join(roomId);
+    // --- Shared Notepad Events (Existing Logic) ---
+    socket.on("get-notepad-content", (roomId: string) => {
+      const room = io.sockets.adapter.rooms.get(roomId);
+      if (room) {
+        // @ts-ignore
+        const content = room.notepadContent || "";
+        socket.emit("notepad-content", content);
+      }
     });
 
-    /**
-     * Event listener for when a user disconnects.
-     * Updates user status to offline and records last seen time.
-     */
-    socket.on("disconnect", () => {
-      console.log(`🔴 User disconnected: ${socket.id}`);
-      if (user && user.userId) {
-        userStatuses.set(user.userId, {
-          isOnline: false,
-          lastSeen: new Date(),
-        });
-        emitUserStatusChange(user.userId, userStatuses.get(user.userId)!); // Notify all clients
+    socket.on("notepad-change", (data: { roomId: string; content: string }) => {
+      const room = io.sockets.adapter.rooms.get(data.roomId);
+      if (room) {
+        // @ts-ignore
+        room.notepadContent = data.content;
       }
+      socket.to(data.roomId).emit("notepad-content", data.content);
+    });
+
+    // --- Disconnect Handler ---
+    socket.on("disconnect", () => {
+      console.log(`\n🔴 User Disconnected:`);
+      console.log(`   - Socket ID: ${socket.id}`);
+      console.log(`   - User ID:   ${userId}`);
+
+      const lastSeenTime = new Date();
+      userStatuses.set(userId, { isOnline: false, lastSeen: lastSeenTime });
+      emitUserStatusChange(userId, { isOnline: false, lastSeen: lastSeenTime });
+      prisma.user
+        .update({ where: { id: userId }, data: { lastSeen: lastSeenTime } })
+        .catch(console.error);
+
       socket.rooms.forEach((room) => {
         if (room !== socket.id) {
           socket.to(room).emit("user-left", socket.id);
@@ -308,10 +185,7 @@ export const initializeSocket = (ioInstance: SocketIOServer) => {
   });
 };
 
-// You can optionally export a function to get the `io` instance
-// if you need to emit events from other parts of your application (e.g., REST controllers).
 export const getIo = (): SocketIOServer => {
-  // Corrected type: SocketIOServer
   if (!io) {
     throw new Error("Socket.IO server not initialized.");
   }

@@ -3,8 +3,10 @@ import { PrismaClient } from "@prisma/client";
 import { createCalendarEvent } from "../services/calendar.service";
 import { getUserId } from "../utils/getUserId";
 import { awardPoints } from "../services/gamification.service";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
 
 const getUserRole = (req: Request): string | null => {
   if (!req.user) return null;
@@ -291,5 +293,95 @@ export const submitFeedback = async (
     res.status(200).json(updatedSession);
   } catch (error) {
     res.status(500).json({ message: "Error submitting feedback." });
+  }
+};
+
+export const generateVideoCallToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = getUserId(req);
+  const { sessionId } = req.params;
+
+  if (!userId) {
+    res.status(401).json({ message: "Authentication required." });
+    return;
+  }
+
+  try {
+    const session = await prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        OR: [{ menteeId: userId }, { mentorId: userId }],
+      },
+    });
+
+    if (!session) {
+      res
+        .status(403)
+        .json({ message: "You are not a participant of this session." });
+      return;
+    }
+
+    const videoToken = jwt.sign({ userId, sessionId }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    res.status(200).json({ videoToken });
+  } catch (error) {
+    console.error("Error generating video call token:", error);
+    res.status(500).json({ message: "Server error while generating token." });
+  }
+};
+
+// --- THIS IS THE NEW FUNCTION THAT WAS ADDED ---
+export const notifyMentorOfCall = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const menteeId = getUserId(req);
+  const { sessionId } = req.params;
+
+  if (!menteeId) {
+    res.status(401).json({ message: "Authentication error" });
+    return;
+  }
+
+  try {
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        mentee: { include: { profile: true } },
+      },
+    });
+
+    if (!session || session.menteeId !== menteeId) {
+      res
+        .status(403)
+        .json({ message: "You are not the mentee for this session." });
+      return;
+    }
+
+    const { mentorId } = session;
+    const menteeName = session.mentee.profile?.name || "Your mentee";
+
+    const notification = await prisma.notification.create({
+      data: {
+        userId: mentorId,
+        type: "VIDEO_CALL_INITIATED",
+        message: `${menteeName} is calling you for your session.`,
+        link: `/session/${sessionId}/call`,
+        isRead: false,
+      },
+    });
+
+    const io = req.app.locals.io;
+    io.to(mentorId).emit("newNotification", notification);
+
+    console.log(`Notification sent to mentor ${mentorId} for video call.`);
+    res.status(200).json({ message: "Notification sent successfully." });
+  } catch (error) {
+    console.error("Error sending call notification:", error);
+    res.status(500).json({ message: "Failed to send notification." });
   }
 };

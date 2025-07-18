@@ -1,51 +1,34 @@
 # MentorMe
 
-**MentorMe** is a full-stack web application built with the **MERN stack** (MongoDB, Express, React, Node.js) and **TypeScript**. It's a mentorship platform designed to connect mentors and mentees — making it easier to request, manage, and participate in mentorship, schedule sessions, and communicate in real time.
+**MentorMe** is a full-stack mentorship matching platform designed to connect mentees with mentors based on their skills and goals. It facilitates the entire mentorship journey, from initial requests and profile matching to real-time communication, session scheduling, and goal tracking. The platform also incorporates advanced features like an AI chat assistant and gamification to enhance user engagement.
 
 ---
 
-## 🚀 Features
+### Live Demo
 
-- **User Authentication**  
-  Secure user registration and login with email/password and social providers (Google, Facebook).
+- **Netlify:** https://dsamentor.netlify.app
 
-- **User Roles**  
-  Three distinct user roles:
+### Core Functionality
 
-  - `MENTEE`
-  - `MENTOR`
-  - `ADMIN`  
-    Each with specific permissions and functionalities.
+- **User Roles:** Differentiated experiences for Mentees, Mentors, and Administrators.
+- **User Authentication:** Secure registration and login using email/password, Google OAuth, and Facebook OAuth.
+- **Dynamic User Profiles:** Comprehensive profiles for all users including name, bio, skills, goals, and an avatar. Profiles can be easily edited.
+- **Mentor/Mentee Matching:** Mentees can browse and send mentorship requests to mentors. Mentors can review and accept/reject incoming requests.
+- **Session Management:**
+  - **Availability Setting:** Mentors can set their weekly availability slots.
+  - **Session Booking:** Mentees can book sessions based on mentor availability.
+  - **Session List:** Users can view their upcoming and past sessions.
+  - **Feedback System:** Mentees can provide ratings and comments for past sessions.
+- **Real-time Messaging:** Integrated chat for seamless communication between matched mentees and mentors, including online status indicators.
+- **Video Conferencing:** Built-in video call functionality for direct mentor-mentee interactions during scheduled sessions.
+- **Goal Tracking:** Mentees can define and manage their personal S.M.A.R.T. (Specific, Measurable, Achievable, Relevant, Time-bound) goals within their mentorships.
+- **Notifications:** Real-time notifications for new requests, session bookings, goal completions, and availability updates.
 
-- **Profile Management**  
-  Users can create and update profiles with bio, skills, and goals.
+### Advanced Features
 
-- **Mentor Search and Filtering**  
-  Mentees can search mentors by name or bio and filter by skills.
-
-- **Mentorship Request System**  
-  Mentees send mentorship requests; mentors can accept or reject.
-
-- **Session Management**
-
-  - Mentors can set weekly availability.
-  - Mentees book sessions with their mentors.
-  - Google Calendar integration for session events.
-  - Automated email reminders.
-
-- **Real-time Communication**
-
-  - Chat between mentors and mentees.
-  - Real-time notifications for important events.
-
-- **Feedback and Reviews**  
-  Mentees can rate and review mentors after sessions.
-
-- **AI-Powered Assistant**  
-  Helps users with career tasks like writing cover letters or interview preparation.
-
-- **Admin Dashboard**  
-  Manage users, mentorships, and view statistics.
+- **Admin Dashboard:** Centralized management for administrators to oversee users, mentorship matches, and sessions on the platform.
+- **AI Chat Assistant:** An intelligent assistant (powered by Google Gemini and Cohere AI) to help users with goal setting, answering questions about the platform, and analyzing uploaded files.
+- **Google Calendar Integration:** Sync mentorship sessions directly with Google Calendar for better scheduling and reminders.
 
 ---
 
@@ -53,28 +36,37 @@
 
 ### Backend
 
-- Node.js
-- Express
-- MongoDB
-- Mongoose
-- Prisma
-- Passport.js
-- JWT (JSON Web Tokens)
-- Socket.IO
-- Cloudinary & Multer (file uploads)
-- Nodemailer
-- Google Calendar API
-- Cohere & Google Generative AI (AI assistant)
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Language:** TypeScript
+- **ORM:** Prisma (for MongoDB)
+- **Database:** MongoDB
+- **Real-time Communication:** Socket.IO Server
+- **Authentication:**
+  - JWT (JSON Web Tokens)
+  - bcryptjs (password hashing)
+  - Passport.js (Google and Facebook OAuth strategies)
+  - Express Session, Connect Mongo (for session management)
+- **API Rate Limiting:** `express-rate-limit`
+- **Environment Variables:** `dotenv`
+- **File Uploads:** Multer with Cloudinary Storage
+- **Email Service:** Nodemailer
+- **AI Integration:** Google Generative AI, Cohere AI
+- **Job Scheduling:** `node-cron` for reminders
+- **Validation:** `express-validator`
 
 ### Frontend
 
-- React
-- Vite
-- React Router
-- Axios
-- Tailwind CSS
-- Socket.IO Client
-- React Hot Toast (notifications)
+- **Framework:** React.js
+- **Language:** TypeScript
+- **Build Tool:** Vite
+- **Routing:** React Router DOM
+- **HTTP Client:** Axios
+- **Real-time Communication:** Socket.IO Client
+- **Styling:** Tailwind CSS, custom CSS
+- **Notifications:** React Hot Toast
+- **Calendar:** React Big Calendar, Moment.js
+- **Other:** `date-fns` for date manipulation
 
 ---
 
@@ -98,6 +90,27 @@
 git clone https://github.com/HSSamuel/mentorship.git
 
 ## 🔧 Backend Setup
-cd backend
 npm install
+Build Command: npm run build
+Start Command: npm start or npm run dev
 ```
+
+## 🔧 Frontend Setup
+
+| npm install                  |
+| :--------------------------- |
+| Build Command: npm run build |
+| Start Command: npm run dev   |
+
+## 🔧 Test Data
+
+| 10 Mentee profiles |
+| :----------------- |
+| 10 Mentor profiles |
+
+## 🔧 The Provided Login information for the following profiles have been submitted along in the LMS.
+
+| Login details for 2 mentors |
+| :-------------------------- |
+| Login details for 2 mentees |
+| Login details for 1 admin   |

@@ -40,3 +40,113 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* General container for the video call page */
+.video-call-container {
+  padding: 1.5rem;
+  background-color: #f8f9fa; /* A light grey, similar to many dashboards */
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif; /* Use the same font as your dashboard */
+}
+
+/* Header and Status text */
+.video-call-header {
+  color: #1a202c;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.video-call-status {
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  min-height: 24px; /* Prevents layout shift as status text changes */
+}
+
+/* Main grid for video streams */
+.video-grid {
+  display: flex;
+  gap: 1.5rem;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .video-grid {
+    flex-direction: row;
+  }
+}
+
+/* Individual video container */
+.video-participant-container {
+  flex: 1;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.video-participant-label {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
+}
+
+.video-element {
+  width: 100%;
+  height: auto;
+  background-color: #e2e8f0;
+  border-radius: 0.5rem;
+}
+
+/* 'Start Camera' button overlay */
+.start-camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 0.75rem;
+}
+
+.start-camera-button {
+  padding: 0.75rem 1.5rem;
+  color: white;
+  background-color: #3b82f6; /* Your brand's primary blue */
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.start-camera-button:hover {
+    background-color: #2563eb; /* A slightly darker blue for hover */
+}
+
+/* Control bar for mute/video buttons */
+.control-bar {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.control-button {
+  padding: 0.75rem 1.5rem;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.control-button.active {
+    background-color: #3b82f6; /* Blue for active states */
+}
+
+.control-button.inactive {
+    background-color: #dc2626; /* Red for inactive/muted states */
+}

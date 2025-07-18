@@ -1,3 +1,7 @@
+# MENTORSHIP MARCHING PLATFORM
+
+A Hackathon project, developed as part of the requirements for Digital SkillUp Africa (DSA), built and presented by HUNSA SEMAKO SAMUEL.
+
 # MentorMe
 
 **MentorMe** is a full-stack mentorship matching platform designed to connect mentees with mentors based on their skills and goals. It facilitates the entire mentorship journey, from initial requests and profile matching to real-time communication, session scheduling, and goal tracking. The platform also incorporates advanced features like an AI chat assistant and gamification to enhance user engagement.

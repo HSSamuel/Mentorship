@@ -1,193 +1,75 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
-import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
 
-// Updated interface to handle the unique video token payload
+// Use a simpler socket type as we only need the user's ID
 interface CustomSocket extends Socket {
-  user?: {
-    userId: string;
-    sessionId: string; // The token now includes the session ID
-  };
+  user?: { userId: string };
 }
 
 let io: SocketIOServer;
 
-const userStatuses = new Map<
-  string,
-  { isOnline: boolean; lastSeen: Date | null }
->();
-
-const emitUserStatusChange = (
-  userId: string,
-  status: { isOnline: boolean; lastSeen: Date | null }
-) => {
-  if (io) {
-    io.emit("userStatusChange", { userId, ...status });
-  }
-};
-
 export const initializeSocket = (ioInstance: SocketIOServer) => {
   io = ioInstance;
-  console.log("✅ Socket.IO service initialized.");
+  console.log("✅ Real-time data socket service initialized.");
 
-  // --- Authentication Middleware for all incoming socket connections ---
+  // Use the main application's JWT for authentication
+  // This token is different from the Twilio video token
   io.use((socket: CustomSocket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
-      console.error(
-        "Auth Error: Socket connection rejected. Token not provided."
-      );
       return next(new Error("Authentication error: Token not provided."));
     }
     try {
-      // Decode the unique videoToken which contains both userId and sessionId
-      const decoded = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        sessionId: string;
-      };
-      socket.user = { userId: decoded.userId, sessionId: decoded.sessionId };
+      // We only need the userId from the standard app token
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      socket.user = { userId: decoded.userId };
       next();
     } catch (err) {
-      console.error("Auth Error: Socket connection rejected. Invalid token.");
       next(new Error("Authentication error: Invalid token."));
     }
   });
 
-  // --- Single, Unified Connection Handler ---
   io.on("connection", (socket: CustomSocket) => {
     const userId = socket.user?.userId;
-    const sessionId = socket.user?.sessionId; // Get sessionId from the authenticated token
-
-    if (!userId || !sessionId) {
-      console.error(
-        `Socket ${socket.id} connected but is missing user/session ID from its token.`
-      );
-      socket.disconnect(true);
-      return;
+    if (!userId) {
+      return socket.disconnect(true);
     }
 
-    console.log(`\n🟢 User Connected:`);
-    console.log(`   - Socket ID: ${socket.id}`);
-    console.log(`   - User ID:   ${userId}`);
+    console.log(
+      `\n🟢 Data socket connected: Socket ID ${socket.id}, User ID ${userId}`
+    );
 
-    // --- User Presence and Status Handling (Existing Logic) ---
-    socket.join(userId); // Join a personal room for direct notifications
-    userStatuses.set(userId, { isOnline: true, lastSeen: null });
-    emitUserStatusChange(userId, { isOnline: true, lastSeen: null });
-    prisma.user
-      .update({ where: { id: userId }, data: { lastSeen: new Date() } })
-      .catch(console.error);
+    // --- Event Handlers for Data Features ---
 
-    // --- WebRTC Signaling Events ---
-    socket.on("join-room", (roomId: string) => {
-      if (roomId !== sessionId) {
-        console.warn(
-          `   - WARNING: User ${userId} tried to join room ${roomId} but their token is for room ${sessionId}.`
-        );
-        return;
-      }
+    // Allows the client to join a specific room for chat and notepad updates
+    socket.on("join-data-room", (roomId: string) => {
       socket.join(roomId);
-      console.log(`   - Action: User joined room ${roomId}`);
-
-      const clientsInRoom = io.sockets.adapter.rooms.get(roomId);
-      const otherUsers = Array.from(clientsInRoom || []).filter(
-        (id) => id !== socket.id
-      );
-
-      if (otherUsers.length > 0) {
-        const otherUserSocketId = otherUsers[0];
-        console.log(
-          `   - Signaling: Notifying ${socket.id} about existing user ${otherUserSocketId}`
-        );
-        socket.emit("other-user", otherUserSocketId);
-      } else {
-        console.log(
-          `   - Signaling: User is the first in the room. Waiting for another user.`
-        );
-      }
+      console.log(`[Data] User ${socket.id} joined data room ${roomId}`);
     });
 
-    socket.on("offer", (payload: { target: string; offer: any }) => {
-      console.log(
-        `   - Signaling: Relaying offer from ${socket.id} to ${payload.target}`
-      );
-      io.to(payload.target).emit("offer", {
-        from: socket.id,
-        offer: payload.offer,
-      });
+    // Handles real-time updates for the shared notepad
+    socket.on("notepad-change", (data: { roomId: string; content: string }) => {
+      // Broadcast the change to everyone else in the room
+      socket.to(data.roomId).emit("notepad-update", data.content);
     });
 
-    socket.on("answer", (payload: { target: string; answer: any }) => {
-      // --- THIS IS THE NEW LOG MESSAGE THAT WAS ADDED ---
-      console.log(
-        `✅ Video Connected: Signaling complete between ${socket.id} and ${payload.target}`
-      );
-      console.log(
-        `   - Signaling: Relaying answer from ${socket.id} to ${payload.target}`
-      );
-      io.to(payload.target).emit("answer", {
-        from: socket.id,
-        answer: payload.answer,
-      });
-    });
-
+    // Handles sending and receiving real-time chat messages
     socket.on(
-      "ice-candidate",
-      (payload: { target: string; candidate: any }) => {
-        io.to(payload.target).emit("ice-candidate", {
-          from: socket.id,
-          candidate: payload.candidate,
+      "send-chat-message",
+      (data: { roomId: string; message: string; senderName: string }) => {
+        // Broadcast the message to everyone else in the room
+        socket.to(data.roomId).emit("new-chat-message", {
+          message: data.message,
+          senderName: data.senderName,
+          socketId: socket.id, // Identify the sender
         });
       }
     );
 
-    // --- Shared Notepad Events (Existing Logic) ---
-    socket.on("get-notepad-content", (roomId: string) => {
-      const room = io.sockets.adapter.rooms.get(roomId);
-      if (room) {
-        // @ts-ignore
-        const content = room.notepadContent || "";
-        socket.emit("notepad-content", content);
-      }
-    });
-
-    socket.on("notepad-change", (data: { roomId: string; content: string }) => {
-      const room = io.sockets.adapter.rooms.get(data.roomId);
-      if (room) {
-        // @ts-ignore
-        room.notepadContent = data.content;
-      }
-      socket.to(data.roomId).emit("notepad-content", data.content);
-    });
-
-    // --- Disconnect Handler ---
     socket.on("disconnect", () => {
-      console.log(`\n🔴 User Disconnected:`);
-      console.log(`   - Socket ID: ${socket.id}`);
-      console.log(`   - User ID:   ${userId}`);
-
-      const lastSeenTime = new Date();
-      userStatuses.set(userId, { isOnline: false, lastSeen: lastSeenTime });
-      emitUserStatusChange(userId, { isOnline: false, lastSeen: lastSeenTime });
-      prisma.user
-        .update({ where: { id: userId }, data: { lastSeen: lastSeenTime } })
-        .catch(console.error);
-
-      socket.rooms.forEach((room) => {
-        if (room !== socket.id) {
-          socket.to(room).emit("user-left", socket.id);
-        }
-      });
+      console.log(`\n🔴 Data socket disconnected: Socket ID ${socket.id}`);
     });
   });
-};
-
-export const getIo = (): SocketIOServer => {
-  if (!io) {
-    throw new Error("Socket.IO server not initialized.");
-  }
-  return io;
 };

@@ -1,7 +1,14 @@
 import React, { Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Link } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+// A more visually appealing loader for the Suspense fallback
+const PageLoader = () => (
+  <div className="flex justify-center items-center h-screen w-full">
+    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 // Lazily import all the page components
 const LoginPage = React.lazy(() => import("./pages/LoginPage"));
@@ -25,7 +32,6 @@ const AdminMatchesPage = React.lazy(() => import("./pages/AdminMatchesPage"));
 const AdminSessionsPage = React.lazy(() => import("./pages/AdminSessionsPage"));
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
 const MessagesPage = React.lazy(() => import("./pages/MessagesPage"));
-// [MODIFIED]: Renamed import from MentorProfilePage to UserProfilePage
 const UserProfilePage = React.lazy(() => import("./pages/MentorProfilePage"));
 const AuthCallbackPage = React.lazy(() => import("./pages/AuthCallbackPage"));
 const ForgotPasswordPage = React.lazy(
@@ -34,11 +40,14 @@ const ForgotPasswordPage = React.lazy(
 const VideoCallPage = React.lazy(() => import("./pages/VideoCallPage"));
 const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
 const GoalsPage = React.lazy(() => import("./pages/GoalsPage"));
+const SessionInsightsPage = React.lazy(
+  () => import("./pages/SessionInsightsPage")
+);
 
 function App() {
   return (
     <Layout>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -52,11 +61,9 @@ function App() {
 
           {/* Main Application Routes */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          {/* [MODIFIED]: Route for generic user profile page */}
           <Route path="/users/:id" element={<UserProfilePage />} />
 
           {/* Protected Routes */}
-          {/* FIX: Add the new route for the mentor profile page to match the URL */}
           <Route
             path="/mentor/:id"
             element={
@@ -137,8 +144,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* --- [UPDATED] Corrected path to fix routing error --- */}
           <Route
-            path="/my-sessions"
+            path="/sessions"
             element={
               <ProtectedRoute>
                 <SessionsListPage />
@@ -150,6 +158,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <VideoCallPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/session/:sessionId/insights"
+            element={
+              <ProtectedRoute>
+                <SessionInsightsPage />
               </ProtectedRoute>
             }
           />
@@ -187,6 +203,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* --- [REMOVED] Catch-all route for 404 Not Found --- */}
         </Routes>
       </Suspense>
     </Layout>

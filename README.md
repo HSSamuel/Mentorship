@@ -72,7 +72,7 @@ A Hackathon project, developed as part of the requirements for Digital SkillUp A
 - **Calendar:** React Big Calendar, Moment.js
 - **Other:** `date-fns` for date manipulation
 
----
+---d
 
 ## 🧰 Getting Started
 
@@ -112,9 +112,14 @@ Start Command: npm start or npm run dev
 | :----------------- |
 | 10 Mentor profiles |
 
-## 🔧 The Provided Login information for the following profiles have been submitted along in the LMS.
+## 🔧 Below are the Login information for the profiles of Mentors and Mentees.
 
-| Login details for 2 mentors |
+| | Login details for 2 mentors
+
+| mentor@gmail.com - MentorMe123 |
+| hssamuel2024@gmail.com - MentorMe123 |
 | :-------------------------- |
-| Login details for 2 mentees |
-| Login details for 1 admin   |
+|
+Login details for 2 mentees |
+mentee@gmail.com - MentorMe123
+idarajoy199@gmail.com - MentorMe123

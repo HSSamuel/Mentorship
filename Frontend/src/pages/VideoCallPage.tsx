@@ -374,13 +374,13 @@ const VideoCallPage = () => {
           <div className="video-participant-container">
             <div ref={remoteVideoRef} className="video-feed" />
             <div className="video-label">
-              {user?.role === 'MENTEE' ? 'Mentor' : 'Mentee'}
+              {user?.role === "MENTEE" ? "Mentor" : "Mentee"}
             </div>
           </div>
           <div className="video-participant-container">
             <div ref={localVideoRef} className="video-feed" />
             <div className="video-label">
-              {user?.role === 'MENTEE' ? 'You (Mentee)' : 'You (Mentor)'}
+              {user?.role === "MENTEE" ? "You (Mentee)" : "You (Mentor)"}
             </div>
           </div>
         </div>

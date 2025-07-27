@@ -43,6 +43,7 @@ model User {
   profileEmbedding   Float[]
   readMessages       Message[]           @relation("ReadByUsers", fields: [readMessageIDs], references: [id])
   readMessageIDs     String[]            @db.ObjectId
+  linkedinId         String?             @unique
   
   // --- [THE FIX] ---
   // Added the missing createdAt field to track when a user is created.
@@ -58,6 +59,7 @@ model Profile {
   skills    String[]
   goals     String?
   avatarUrl String?
+  vector    Float[]
 }
 
 model MentorshipRequest {
@@ -67,6 +69,7 @@ model MentorshipRequest {
   status    String   @default("PENDING")
   message   String
   createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 
   // Relationships
   mentor  User     @relation("MentorRequests", fields: [mentorId], references: [id])
@@ -80,12 +83,14 @@ model MentorshipRequest {
 }
 
 model SessionInsight {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId   String   @unique @db.ObjectId
-  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  summary     String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId String   @unique @db.ObjectId
+  summary   String
+  keyTopics String[]
   actionItems String[]
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id])
 }
 
 model Session {

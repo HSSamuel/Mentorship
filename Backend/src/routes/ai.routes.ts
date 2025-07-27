@@ -9,6 +9,7 @@ import {
   deleteAIConversation,
   getAiMentorMatches,
   summarizeTranscript,
+  getIcebreakers,
 } from "../controllers/ai.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { validateRequest } from "../middleware/validateRequest";
@@ -19,10 +20,10 @@ const router = Router();
 // Middleware to protect all routes defined below it
 router.use(authMiddleware);
 
-// --- ROUTE FOR MENTOR MATCHING ---
+// --- AI-Powered Mentor Matching Route ---
 router.get("/matches", getAiMentorMatches);
 
-// --- Route for summarizing session transcripts ---
+// --- AI-Powered Session Analysis Route ---
 router.post(
   "/summarize",
   [
@@ -37,10 +38,20 @@ router.post(
   summarizeTranscript
 );
 
-// --- Chat Routes ---
+// --- AI-Powered Icebreakers Route ---
+router.get(
+  "/icebreakers/:mentorshipId",
+  [param("mentorshipId").isMongoId().withMessage("Invalid mentorship ID.")],
+  validateRequest,
+  getIcebreakers
+);
 
+// --- AI Chat Assistant Routes ---
+
+// Get all conversations for the logged-in user
 router.get("/conversations", getAIConversations);
 
+// Get all messages for a specific conversation
 router.get(
   "/messages/:conversationId",
   [param("conversationId").isMongoId().withMessage("Invalid conversation ID.")],
@@ -48,11 +59,14 @@ router.get(
   getAIMessages
 );
 
+// Main chat handlers
 router.post("/chat", handleAIChat);
 router.post("/chat/cohere", handleCohereChat);
 
+// File analysis route
 router.post("/analyze-file", memoryUpload.single("file"), handleFileAnalysis);
 
+// Delete a conversation and its messages
 router.delete(
   "/conversations/:conversationId",
   [param("conversationId").isMongoId().withMessage("Invalid conversation ID.")],

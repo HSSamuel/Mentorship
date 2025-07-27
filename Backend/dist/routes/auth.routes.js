@@ -12,7 +12,7 @@ const express_validator_1 = require("express-validator");
 const validateRequest_1 = require("../middleware/validateRequest");
 const router = (0, express_1.Router)();
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
-// Standard email/password registration (now public)
+// Standard email/password registration
 router.post("/register", [
     (0, express_validator_1.body)("email").isEmail().withMessage("Please enter a valid email"),
     (0, express_validator_1.body)("password")
@@ -42,19 +42,12 @@ router.get("/google/callback", passport_1.default.authenticate("google", {
     const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
 });
-// Facebook Auth
-router.get("/facebook", passport_1.default.authenticate("facebook", { scope: ["email"] }));
-router.get("/facebook/callback", passport_1.default.authenticate("facebook", {
-    failureRedirect: `${(process.env.FRONTEND_URL || "").replace(/\/$/, "")}/login`,
-    session: false,
-}), (req, res) => {
-    const user = req.user;
-    const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-        expiresIn: "1d",
-    });
-    const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+// LinkedIn Auth
+router.get("/linkedin", (req, res) => {
+    const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${process.env.LINKEDIN_REDIRECT_URI}&scope=profile%20email%20openid`;
+    res.redirect(linkedInAuthUrl);
 });
+router.get("/linkedin/callback", auth_controller_1.handleLinkedInCallback);
 // Forgot/Reset Password Routes
 router.post("/forgot-password", [(0, express_validator_1.body)("email").isEmail().withMessage("Please enter a valid email")], validateRequest_1.validateRequest, auth_controller_1.forgotPassword);
 router.post("/reset-password", [

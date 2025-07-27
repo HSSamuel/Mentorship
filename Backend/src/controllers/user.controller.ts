@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../client";
 import { getUserId } from "../utils/getUserId";
 import { generateEmbedding } from "../services/ai.service";
+import { cosineSimilarity } from "../utils/cosineSimilarity";
 
 export const getMyProfile = async (
   req: Request,
@@ -335,35 +336,52 @@ export const getRecommendedMentors = async (
   }
 
   try {
-    const menteeProfile = await prisma.profile.findUnique({
-      where: { userId },
-      select: { skills: true, goals: true },
+    // 1. Get the current mentee's profile and vector
+    const mentee = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
     });
 
-    if (!menteeProfile || menteeProfile.skills.length === 0) {
+    // Check if the mentee has a profile and a generated vector
+    if (!mentee?.profile?.vector || mentee.profile.vector.length === 0) {
       res.status(200).json([]);
       return;
     }
 
-    const recommendedMentors = await prisma.user.findMany({
+    // 2. Get all mentors who have a profile
+    const mentors = await prisma.user.findMany({
       where: {
         role: "MENTOR",
         id: { not: userId },
         profile: {
-          skills: {
-            hasSome: menteeProfile.skills,
-          },
+          isNot: null, // We only need to check that they have a profile
         },
       },
-      take: 3,
-      select: {
-        id: true,
-        profile: true,
-      },
+      include: { profile: true }, // This ensures profile data is included
     });
 
-    res.status(200).json(recommendedMentors);
+    // 3. Calculate the similarity score for each mentor
+    const recommendations = mentors
+      // --- THIS IS THE FIX ---
+      // Filter out mentors who don't have a vector and calculate the score
+      .map((mentor) => {
+        if (!mentor.profile?.vector || mentor.profile.vector.length === 0) {
+          return null; // This mentor will be filtered out
+        }
+        const score = cosineSimilarity(
+          mentee.profile!.vector,
+          mentor.profile.vector // Correctly access the vector
+        );
+        return { ...mentor, matchScore: score };
+      })
+      .filter(Boolean) // Remove any null entries
+      // --------------------
+      .sort((a, b) => b!.matchScore - a!.matchScore)
+      .slice(0, 3);
+
+    res.status(200).json(recommendations);
   } catch (error) {
+    console.error("Error fetching recommended mentors:", error);
     res.status(500).json({ message: "Error fetching recommended mentors." });
   }
 };

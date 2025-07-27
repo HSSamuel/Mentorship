@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPassword = exports.forgotPassword = exports.getMe = exports.login = exports.register = void 0;
+exports.handleLinkedInCallback = exports.resetPassword = exports.forgotPassword = exports.getMe = exports.login = exports.register = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zxcvbn_1 = __importDefault(require("zxcvbn"));
@@ -11,7 +11,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const email_service_1 = require("../services/email.service");
 const config_1 = __importDefault(require("../config"));
 const client_1 = __importDefault(require("../client"));
-// --- [MODIFIED] Import the shared streamClient instance ---
+const axios_1 = __importDefault(require("axios"));
 const stream_controller_1 = require("./stream.controller");
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
 const getUserId = (req) => {
@@ -214,3 +214,66 @@ const resetPassword = async (req, res) => {
     }
 };
 exports.resetPassword = resetPassword;
+const handleLinkedInCallback = async (req, res) => {
+    // --- [FIX] Added the required return type ---
+    const { code } = req.query;
+    if (!code) {
+        res.status(400).send("Error: No authorization code provided.");
+        return;
+    }
+    try {
+        const tokenResponse = await axios_1.default.post("https://www.linkedin.com/oauth/v2/accessToken", null, {
+            params: {
+                grant_type: "authorization_code",
+                code: code,
+                client_id: process.env.LINKEDIN_CLIENT_ID,
+                client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+                redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+            },
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        });
+        const accessToken = tokenResponse.data.access_token;
+        const profileResponse = await axios_1.default.get("https://api.linkedin.com/v2/me", {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+        const linkedInData = profileResponse.data;
+        const emailResponse = await axios_1.default.get("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+        const primaryEmail = emailResponse.data.elements[0]["handle~"].emailAddress;
+        let user = await client_1.default.user.findUnique({
+            where: { email: primaryEmail },
+        });
+        if (!user) {
+            user = await client_1.default.user.create({
+                data: {
+                    email: primaryEmail,
+                    linkedinId: linkedInData.id,
+                    profile: {
+                        create: {
+                            name: `${linkedInData.localizedFirstName} ${linkedInData.localizedLastName}`,
+                            bio: "Profile created via LinkedIn. Please update your bio.",
+                            skills: [],
+                            goals: "To connect with a mentor and grow my career.",
+                        },
+                    },
+                },
+            });
+        }
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
+            expiresIn: "1d",
+        });
+        res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    }
+    catch (error) {
+        console.error("LinkedIn authentication failed:", error);
+        res.status(500).send("An error occurred during LinkedIn authentication.");
+    }
+};
+exports.handleLinkedInCallback = handleLinkedInCallback;

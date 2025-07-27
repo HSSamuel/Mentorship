@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { sendPasswordResetEmail } from "../services/email.service";
 import config from "../config";
 import prisma from "../client";
-// --- [MODIFIED] Import the shared streamClient instance ---
+import axios from "axios";
 import { streamClient } from "./stream.controller";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
@@ -244,5 +244,85 @@ export const resetPassword = async (
   } catch (error) {
     console.error("Reset Password Error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const handleLinkedInCallback = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  // --- [FIX] Added the required return type ---
+  const { code } = req.query;
+
+  if (!code) {
+    res.status(400).send("Error: No authorization code provided.");
+    return;
+  }
+
+  try {
+    const tokenResponse = await axios.post(
+      "https://www.linkedin.com/oauth/v2/accessToken",
+      null,
+      {
+        params: {
+          grant_type: "authorization_code",
+          code: code as string,
+          client_id: process.env.LINKEDIN_CLIENT_ID,
+          client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+          redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+        },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+    const accessToken = tokenResponse.data.access_token;
+
+    const profileResponse = await axios.get("https://api.linkedin.com/v2/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const linkedInData = profileResponse.data;
+    const emailResponse = await axios.get(
+      "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    const primaryEmail = emailResponse.data.elements[0]["handle~"].emailAddress;
+
+    let user = await prisma.user.findUnique({
+      where: { email: primaryEmail },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: primaryEmail,
+          linkedinId: linkedInData.id,
+          profile: {
+            create: {
+              name: `${linkedInData.localizedFirstName} ${linkedInData.localizedLastName}`,
+              bio: "Profile created via LinkedIn. Please update your bio.",
+              skills: [],
+              goals: "To connect with a mentor and grow my career.",
+            },
+          },
+        },
+      });
+    }
+
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
+      expiresIn: "1d",
+    });
+
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+  } catch (error) {
+    console.error("LinkedIn authentication failed:", error);
+    res.status(500).send("An error occurred during LinkedIn authentication.");
   }
 };

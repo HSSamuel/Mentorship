@@ -47,7 +47,9 @@
     "ts-node": "^10.9.2",
     "twilio": "^5.7.3",
     "typescript": "^5.8.3",
-    "zxcvbn": "^4.4.2"
+    "zxcvbn": "^4.4.2",
+    "fastembed": "^1.14.4",
+    "openai": "^4.20.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

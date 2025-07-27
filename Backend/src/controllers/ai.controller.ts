@@ -433,7 +433,7 @@ export const getAiMentorMatches = async (
   }
 };
 
-// --- [NEW] Controller to summarize a session transcript ---
+// --- [THIS FUNCTION HAS BEEN UPDATED] ---
 export const summarizeTranscript = async (
   req: Request,
   res: Response
@@ -453,7 +453,6 @@ export const summarizeTranscript = async (
   }
 
   try {
-    // 1. Verify the user is a participant of the session
     const session = await prisma.session.findFirst({
       where: {
         id: sessionId,
@@ -468,53 +467,93 @@ export const summarizeTranscript = async (
       return;
     }
 
-    // 2. Prepare the prompt for the AI
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = `
-      You are an AI assistant for a mentorship platform. Your task is to analyze the following transcript of a mentorship session.
-      Please provide a concise, professional summary of the conversation.
-      After the summary, create a bulleted list of the key action items discussed for the mentee.
-      
+      You are an AI assistant for a mentorship platform. Analyze the following transcript and provide a structured summary in a clean JSON format.
+      The JSON object must have three keys: "summary", "keyTopics", and "actionItems".
+      - "summary": A concise, 2-3 sentence professional summary of the session.
+      - "keyTopics": An array of the 3-5 most important topics discussed.
+      - "actionItems": An array of clear, actionable steps for the mentee.
+
       Transcript:
       ---
       ${transcript}
       ---
     `;
 
-    // 3. Call the AI model
+    // 1. Call the AI model and get the response
     const result = await model.generateContent(prompt);
     const aiResponseText = result.response.text();
 
-    // 4. Extract summary and action items (simple parsing)
-    const summaryMatch = aiResponseText.match(
-      /summary:(.*?)(action items:|$)/is
-    );
-    const actionItemsMatch = aiResponseText.match(/action items:(.*)/is);
+    // 2. Parse the JSON string from the AI into an object
+    const insights = JSON.parse(aiResponseText);
 
-    const summary = summaryMatch
-      ? summaryMatch[1].trim()
-      : "Summary could not be generated.";
-    const actionItems = actionItemsMatch
-      ? actionItemsMatch[1]
-          .trim()
-          .split("\n")
-          .map((item) => item.replace(/^- /, "").trim())
-          .filter(Boolean)
-      : [];
-
-    // 5. Save the insights to the database
-    const insight = await prisma.sessionInsight.upsert({
+    // 3. Save the structured insights to the database
+    const savedInsight = await prisma.sessionInsight.upsert({
       where: { sessionId },
-      update: { summary, actionItems },
-      create: { sessionId, summary, actionItems },
+      update: {
+        summary: insights.summary,
+        keyTopics: insights.keyTopics,
+        actionItems: insights.actionItems,
+      },
+      create: {
+        sessionId,
+        summary: insights.summary,
+        keyTopics: insights.keyTopics,
+        actionItems: insights.actionItems,
+      },
     });
 
-    res.status(200).json(insight);
+    res.status(200).json(savedInsight);
   } catch (error: any) {
     console.error("Error summarizing transcript:", error);
     res.status(500).json({
       message: "Server error while summarizing transcript.",
       error: error.message || "An unknown error occurred.",
     });
+  }
+};
+
+export const getIcebreakers = async (
+  req: Request,
+  res: Response
+): Promise<void> => { // Added the required return type
+  const { mentorshipId } = req.params;
+
+  try {
+    const mentorship = await prisma.mentorshipRequest.findUnique({
+      where: { id: mentorshipId },
+      include: {
+        mentee: { include: { profile: true } },
+      },
+    });
+
+    if (!mentorship?.mentee?.profile) {
+      res.status(404).json({ message: "Mentee profile not found." });
+      return;
+    }
+
+    const menteeProfile = mentorship.mentee.profile;
+
+    const prompt = `
+      Based on the following mentee profile, generate a JSON object with a single key: "icebreakers".
+      "icebreakers" should be an array of 3-4 open-ended, encouraging questions that a mentor could ask to start a conversation.
+      The questions should be directly related to the mentee's stated goals and skills.
+
+      Mentee Profile:
+      - Skills: ${menteeProfile.skills.join(", ")}
+      - Goals: ${menteeProfile.goals}
+    `;
+    
+    // Replaced the incorrect 'openai' variable with the correct 'genAI'
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const suggestions = JSON.parse(result.response.text() || "{}");
+    // --- END OF FIX ---
+
+    res.status(200).json(suggestions);
+  } catch (error) {
+    console.error("Error generating icebreakers:", error);
+    res.status(500).json({ message: "Error generating icebreakers." });
   }
 };

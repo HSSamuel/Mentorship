@@ -7,6 +7,7 @@ import {
   getMe,
   forgotPassword,
   resetPassword,
+  handleLinkedInCallback,
 } from "../controllers/auth.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { body } from "express-validator";
@@ -15,7 +16,7 @@ import { validateRequest } from "../middleware/validateRequest";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key";
 
-// Standard email/password registration (now public)
+// Standard email/password registration
 router.post(
   "/register",
   [
@@ -71,30 +72,13 @@ router.get(
   }
 );
 
-// Facebook Auth
-router.get(
-  "/facebook",
-  passport.authenticate("facebook", { scope: ["email"] })
-);
+// LinkedIn Auth
+router.get("/linkedin", (req, res) => {
+  const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${process.env.LINKEDIN_REDIRECT_URI}&scope=profile%20email%20openid`;
+  res.redirect(linkedInAuthUrl);
+});
 
-router.get(
-  "/facebook/callback",
-  passport.authenticate("facebook", {
-    failureRedirect: `${(process.env.FRONTEND_URL || "").replace(
-      /\/$/,
-      ""
-    )}/login`,
-    session: false,
-  }),
-  (req, res) => {
-    const user = req.user as any;
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: "1d",
-    });
-    const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
-  }
-);
+router.get("/linkedin/callback", handleLinkedInCallback);
 
 // Forgot/Reset Password Routes
 router.post(

@@ -14,37 +14,64 @@ model Level {
   users   User[]
 }
 
+model ForumPost {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  authorId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User           @relation(fields: [authorId], references: [id])
+  comments ForumComment[]
+}
+
+model ForumComment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  postId    String   @db.ObjectId
+  authorId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post   ForumPost @relation(fields: [postId], references: [id])
+  author User      @relation(fields: [authorId], references: [id])
+}
+
 model User {
-  id                 String              @id @default(auto()) @map("_id") @db.ObjectId
-  email              String              @unique
-  password           String?
-  role               Role                @default(MENTEE)
-  googleId           String?             @unique // Ensure this is unique if you use it for logins
-  facebookId         String?             @unique // Ensure this is unique if you use it for logins
-  profile            Profile?
-  sentRequests       MentorshipRequest[] @relation("MenteeRequests")
-  receivedRequests   MentorshipRequest[] @relation("MentorRequests")
-  mentorSessions     Session[]           @relation("MentorSessions")
-  menteeSessions     Session[]           @relation("MenteeSessions")
-  sentMessages       Message[]           @relation("SentMessages")
-  notifications      Notification[]
-  availabilities     Availability[]
-  aiConversations    AIConversation[]
-  googleAccessToken  String?
-  googleRefreshToken String?
-  passwordResetToken String?
+  id                   String                @id @default(auto()) @map("_id") @db.ObjectId
+  email                String                @unique
+  password             String?
+  role                 Role                  @default(MENTEE)
+  googleId             String?               @unique
+  facebookId           String?               @unique
+  profile              Profile?
+  sentRequests         MentorshipRequest[]   @relation("MenteeRequests")
+  receivedRequests     MentorshipRequest[]   @relation("MentorRequests")
+  mentorSessions       Session[]             @relation("MentorSessions")
+  menteeSessions       Session[]             @relation("MenteeSessions")
+  sentMessages         Message[]             @relation("SentMessages")
+  notifications        Notification[]
+  availabilities       Availability[]
+  aiConversations      AIConversation[]
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  passwordResetToken   String?
   passwordResetExpires DateTime?
-  conversations      Conversation[]      @relation(fields: [conversationIDs], references: [id])
-  conversationIDs    String[]            @db.ObjectId
-  points             Int                 @default(0)
-  levelId            String?             @db.ObjectId
-  level              Level?              @relation(fields: [levelId], references: [id])
-  lastSeen           DateTime            @default(now()) @updatedAt
-  profileEmbedding   Float[]
-  readMessages       Message[]           @relation("ReadByUsers", fields: [readMessageIDs], references: [id])
-  readMessageIDs     String[]            @db.ObjectId
-  githubId           String?             @unique
-  createdAt          DateTime            @default(now())
+  conversations        Conversation[]        @relation(fields: [conversationIDs], references: [id])
+  conversationIDs      String[]              @db.ObjectId
+  points               Int                   @default(0)
+  levelId              String?               @db.ObjectId
+  level                Level?                @relation(fields: [levelId], references: [id])
+  lastSeen             DateTime              @default(now()) @updatedAt
+  profileEmbedding     Float[]
+  readMessages         Message[]             @relation("ReadByUsers", fields: [readMessageIDs], references: [id])
+  readMessageIDs       String[]              @db.ObjectId
+  githubId             String?               @unique
+  createdAt            DateTime              @default(now())
+  posts                ForumPost[]
+  comments             ForumComment[]
+  sessionParticipations SessionParticipant[]
 }
 
 model Profile {
@@ -60,50 +87,64 @@ model Profile {
 }
 
 model MentorshipRequest {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  mentorId  String   @db.ObjectId
-  menteeId  String   @db.ObjectId
-  status    String   @default("PENDING")
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  mentorId  String    @db.ObjectId
+  menteeId  String    @db.ObjectId
+  status    String    @default("PENDING")
   message   String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
 
-  // Relationships
   mentor  User     @relation("MentorRequests", fields: [mentorId], references: [id])
   mentee  User     @relation("MenteeRequests", fields: [menteeId], references: [id])
   reviews Review[]
-  goals   Goal[]   // Added the missing relation to Goal
+  goals   Goal[]
 
-  // Indexes
   @@index([mentorId, status])
   @@index([menteeId, status])
 }
 
 model SessionInsight {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId String   @unique @db.ObjectId
-  summary   String
-  keyTopics String[]
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId   String   @unique @db.ObjectId
+  summary     String
+  keyTopics   String[]
   actionItems String[]
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   session Session @relation(fields: [sessionId], references: [id])
 }
 
 model Session {
-  id         String          @id @default(auto()) @map("_id") @db.ObjectId
-  mentorId   String          @db.ObjectId
-  menteeId   String          @db.ObjectId
-  date       DateTime
-  rating     Int?
-  feedback   String?
-  mentor     User            @relation("MentorSessions", fields: [mentorId], references: [id])
-  mentee     User            @relation("MenteeSessions", fields: [menteeId], references: [id])
-  createdAt  DateTime        @default(now())
-  insights   SessionInsight?
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  mentorId        String               @db.ObjectId
+  menteeId        String?              @db.ObjectId
+  date            DateTime
+  rating          Int?
+  feedback        String?
+  mentor          User                 @relation("MentorSessions", fields: [mentorId], references: [id])
+  mentee          User?                @relation("MenteeSessions", fields: [menteeId], references: [id])
+  createdAt       DateTime             @default(now())
+  insights        SessionInsight?
+  isGroupSession  Boolean              @default(false)
+  topic           String?
+  maxParticipants Int?
+  participants    SessionParticipant[]
 
   @@index([mentorId, date])
   @@index([menteeId, date])
+}
+
+model SessionParticipant {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId String   @db.ObjectId
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  menteeId  String   @db.ObjectId
+  mentee    User     @relation(fields: [menteeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, menteeId])
+  @@index([menteeId])
 }
 
 model Review {
@@ -151,18 +192,18 @@ model Availability {
   id        String @id @default(auto()) @map("_id") @db.ObjectId
   mentorId  String @db.ObjectId
   mentor    User   @relation(fields: [mentorId], references: [id])
-  day       String // e.g., "Monday", "Tuesday"
-  startTime String // e.g., "09:00"
-  endTime   String // e.g., "17:00"
+  day       String
+  startTime String
+  endTime   String
 }
 
 model Conversation {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  participants   User[]    @relation(fields: [participantIDs], references: [id])
-  participantIDs String[]  @db.ObjectId
-  messages       Message[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  participants    User[]    @relation(fields: [participantIDs], references: [id])
+  participantIDs  String[]  @db.ObjectId
+  messages        Message[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   streamChannelId String?   @unique
 }
 
@@ -179,22 +220,36 @@ model Message {
 }
 
 model AIConversation {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String      @db.ObjectId
-  user       User        @relation(fields: [userId], references: [id])
-  title      String
-  messages   AIMessage[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String      @db.ObjectId
+  user      User        @relation(fields: [userId], references: [id])
+  title     String
+  messages  AIMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 model AIMessage {
   id             String         @id @default(auto()) @map("_id") @db.ObjectId
   conversationId String         @db.ObjectId
   conversation   AIConversation @relation(fields: [conversationId], references: [id])
-  sender         String // "USER" or "AI"
+  sender         String
   content        String
   createdAt      DateTime       @default(now())
+}
+
+// --- NEW MODEL FOR RESOURCE LIBRARY ---
+model Resource {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  link        String       @unique
+  type        ResourceType // ARTICLE, VIDEO, COURSE, etc.
+  tags        String[]
+  imageUrl    String?
+  embedding   Float[]      // For AI-powered recommendations
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 enum Role {
@@ -219,4 +274,14 @@ enum NotificationType {
   GOAL_COMPLETED
   AVAILABILITY_UPDATED
   VIDEO_CALL_INITIATED
+}
+
+// --- NEW ENUM FOR RESOURCE TYPE ---
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  COURSE
+  BOOK
+  PODCAST
+  OTHER
 }

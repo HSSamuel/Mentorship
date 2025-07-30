@@ -46,6 +46,14 @@ const SessionInsightsPage = React.lazy(
 const AdminDashboardPage = React.lazy(
   () => import("./pages/AdminDashboardPage")
 );
+const CommunityPage = React.lazy(() => import("./pages/CommunityPage"));
+const PostViewPage = React.lazy(() => import("./pages/PostViewPage"));
+const NewPostPage = React.lazy(() => import("./pages/NewPostPage"));
+const LibraryPage = React.lazy(() => import("./pages/LibraryPage"));
+// --- [NEW] Lazily import the new Admin Resources page ---
+const AdminResourcesPage = React.lazy(
+  () => import("./pages/AdminResourcesPage")
+);
 
 // This helper component correctly handles the redirect
 const MentorRedirect = () => {
@@ -79,10 +87,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* --- [THIS IS THE FIX] --- */}
-          {/* The route now correctly uses the MentorRedirect component */}
           <Route path="/mentor/:id" element={<MentorRedirect />} />
-          {/* --- END OF FIX --- */}
 
           {/* Protected Routes */}
           <Route
@@ -198,6 +203,41 @@ function App() {
             }
           />
 
+          {/* Community Forum Routes */}
+          <Route
+            path="/community"
+            element={
+              <ProtectedRoute>
+                <CommunityPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/community/new"
+            element={
+              <ProtectedRoute>
+                <NewPostPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/community/:postId"
+            element={
+              <ProtectedRoute>
+                <PostViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/library"
+            element={
+              <ProtectedRoute>
+                <LibraryPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
@@ -228,6 +268,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["ADMIN"]}>
                 <AdminSessionsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* --- [NEW] Admin Resources Route --- */}
+          <Route
+            path="/admin/resources"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <AdminResourcesPage />
               </ProtectedRoute>
             }
           />

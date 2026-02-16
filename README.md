@@ -97,6 +97,7 @@ git clone https://github.com/HSSamuel/mentorship.git
 npm install
 Build Command: npm run build
 Start Command: npm start or npm run dev
+npm run generate-embeddings
 ```
 
 ## 🔧 Frontend Setup
